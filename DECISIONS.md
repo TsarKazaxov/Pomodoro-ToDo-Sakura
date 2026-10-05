@@ -31,7 +31,6 @@ Le modèle du brief ne permet ni la synchro entre deux Mac, ni un minuteur qui s
 interface Task {
   // … champs du brief …
   updatedAt: string;      // ISO — arbitrage de fusion entre deux Mac
-  deletedAt?: string;     // pierre tombale : une suppression doit se propager
 }
 interface Session {
   // … champs du brief …
