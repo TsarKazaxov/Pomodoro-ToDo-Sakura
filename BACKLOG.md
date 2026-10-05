@@ -13,6 +13,7 @@ Idées notées, **non codées**. Re-priorisation après les 5 jours d'usage du c
 - Application iPhone
 
 ## Repérées pendant le cadrage
+- **Fusion multi-Mac simultanée** (fusion par `id` + `updatedAt`, pierres tombales `deletedAt`, absorption des copies de conflit iCloud) — inutile tant qu'un seul Mac écrit à la fois (D-014).
 - **Mise à jour automatique** (`tauri-plugin-updater`) — demande une signature des mises à jour ; en V1, mise à jour manuelle via la page Releases.
 - **Journal de focus** : une note libre à la fin d'un pomodoro (« sur quoi j'ai bloqué »).
 - **Découpage assisté d'une XL** : bouton « découper » qui crée N tâches S/M liées.

@@ -52,7 +52,10 @@ interface DataFile {
 }
 ```
 
-### D-006 · Synchronisation iCloud : fusion par entité, pas « dernier qui écrit gagne » **(à valider — Q4)**
+### D-006 · ~~Synchronisation iCloud : fusion par entité~~ → remplacée par D-014
+_Conservé pour l'historique. Q4 a montré qu'il n'y a qu'un Mac aujourd'hui._
+
+### D-006-old · Synchronisation iCloud : fusion par entité, pas « dernier qui écrit gagne »
 - **Contexte** : un seul JSON réécrit en entier. Si les deux Mac écrivent à quelques secondes d'intervalle, le dernier écrase les tâches créées par l'autre. iCloud peut aussi créer des copies « conflit » (`sakura-data 2.json`).
 - **Décision** : au rechargement (mtime changé), fusion par `id` — la version au `updatedAt` le plus récent gagne, les `deletedAt` se propagent, les sessions sont une union (append-only). Les fichiers de conflit iCloud détectés dans le dossier sont fusionnés puis archivés.
 - **Garde-fou** : si le fichier est un placeholder `.icloud` (stockage optimisé), on demande le téléchargement et on affiche « synchronisation en cours » au lieu de croire le fichier absent.
@@ -82,12 +85,27 @@ interface DataFile {
 
 ---
 
-## Questions ouvertes (Phase 0)
+## Réponses au cadrage (Phase 0)
 
-Voir le résumé de Phase 0 dans la conversation. Les réponses seront reportées ici.
+| Q | Réponse | Conséquence |
+|---|---|---|
+| Q1 Heatmap | Points des tâches terminées + point discret si pomodoros sans tâche terminée | D-013 |
+| Q2 Test sur Mac | Oui, via le `.dmg` de la CI | D-001 confirmé |
+| Q3 Raccourcis | Pas de conflit | ⌥⌘P / ⌥⌘N / ⌥⌘S gardés |
+| Q4 Deux Mac | Un seul Mac aujourd'hui ; un éventuel 2ᵉ sera utilisé l'un après l'autre | D-014 |
+| Q5 Prototype | Page web publiée | Le prototype sert à valider le design ; la fenêtre flottante réelle arrive en Phase 3 |
 
-- **Q1** Heatmap : points des tâches terminées seulement, ou aussi l'effort en cours (pomodoros) ?
-- **Q2** Boucle de test : OK pour tester via le `.dmg` produit par GitHub Actions à chaque ✋ (ou cloner et `npm run tauri dev` sur ton Mac) ?
-- **Q3** ⌥⌘P / ⌥⌘N / ⌥⌘S : conflits avec des raccourcis de tes outils (Figma, etc.) ?
-- **Q4** Les deux Mac sont-ils ouverts **en même temps** sur Sakura, ou l'un après l'autre ?
-- **Q5** Prototype Phase 1 : page web publiée (lien privé) acceptable, ou tu veux uniquement le fichier HTML local ?
+### D-013 · Heatmap : intensité = points, marque d'effort en cours
+- Couleur de la case = somme des points des tâches terminées ce jour-là (brief inchangé).
+- Si la case vaut 0 point mais compte ≥ 1 pomodoro terminé : petit point `--ink-muted` au centre. Un jour passé sur une XL non terminée n'apparaît plus comme vide.
+- L'infobulle affiche toujours points, tâches et pomodoros.
+
+### D-014 · iCloud : emplacement oui, fusion non
+- **Contexte** : un seul Mac aujourd'hui. Un usage successif (jamais simultané) ne justifie pas un moteur de fusion.
+- **Décision** :
+  - Le fichier reste dans iCloud Drive par défaut : sauvegarde gratuite et migration vers un futur Mac sans rien faire.
+  - Rechargement si la date de modification change (prévu au brief, peu coûteux) ; dernière écriture gagne.
+  - Garde-fou unique : au démarrage, si le fichier iCloud est plus récent que la dernière lecture, on le relit **avant** toute écriture (évite d'écraser les données d'un autre Mac pas encore descendues).
+  - Placeholders `.icloud` gérés (D-006-old, garde-fou conservé).
+  - `updatedAt` conservé (coût nul). `deletedAt` et la fusion par entité → `BACKLOG.md`.
+- **Impact sur « Terminé » V1** : le critère « synchro entre deux Mac » devient « survit à un changement de Mac via iCloud, en usage successif ».
