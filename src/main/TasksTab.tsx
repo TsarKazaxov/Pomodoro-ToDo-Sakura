@@ -1,6 +1,6 @@
 // Onglet Tâches : backlog complet, glisser-déposer, filtres, édition en ligne, épinglage.
 
-import { useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import {
   SIZES,
   TASK_STATUSES,
@@ -34,6 +34,31 @@ export function TasksTab({ data }: { data: DataFile }) {
   const [sizes, setSizes] = useState<Set<Size>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const dragRef = useRef<string | null>(null);
+  const dnd = useMemo<DnD>(
+    () => ({
+      start(id) {
+        dragRef.current = id;
+        setDragId(id);
+      },
+      end() {
+        dragRef.current = null;
+        setDragId(null);
+        setOverId(null);
+      },
+      over(id) {
+        setOverId((cur) => (cur === id ? cur : id));
+      },
+      drop(id) {
+        const from = dragRef.current;
+        if (from && from !== id) dispatch({ type: "task/move", id: from, beforeId: id });
+        dragRef.current = null;
+        setDragId(null);
+        setOverId(null);
+      },
+    }),
+    [dispatch],
+  );
 
   const list = useMemo(
     () =>
@@ -122,18 +147,7 @@ export function TasksTab({ data }: { data: DataFile }) {
               expected={data.settings.scale[t.size].expectedPomodoros}
               dragging={dragId === t.id}
               over={overId === t.id && dragId !== t.id}
-              onDragStart={() => setDragId(t.id)}
-              onDragEnd={() => {
-                setDragId(null);
-                setOverId(null);
-              }}
-              onDragOver={() => setOverId(t.id)}
-              onDrop={() => {
-                if (dragId && dragId !== t.id)
-                  dispatch({ type: "task/move", id: dragId, beforeId: t.id });
-                setDragId(null);
-                setOverId(null);
-              }}
+              dnd={dnd}
             />
           ))}
         </ul>
@@ -147,18 +161,44 @@ export function TasksTab({ data }: { data: DataFile }) {
   );
 }
 
+interface DnD {
+  start(id: string): void;
+  end(): void;
+  over(id: string): void;
+  drop(id: string): void;
+}
+
 interface RowProps {
   task: Task;
   expected: number;
   dragging: boolean;
   over: boolean;
-  onDragStart(): void;
-  onDragEnd(): void;
-  onDragOver(): void;
-  onDrop(): void;
+  /** Stable d'un rendu à l'autre : seules les lignes modifiées se redessinent (1 000 tâches). */
+  dnd: DnD;
 }
 
-function TaskRow({ task: t, expected, dragging, over, ...dnd }: RowProps) {
+/**
+ * L'état arrive de la fenêtre propriétaire par copie (D-026) : chaque tâche est un nouvel objet
+ * à chaque mise à jour. On compare donc les champs affichés, pas les références.
+ */
+function sameRow(a: RowProps, b: RowProps): boolean {
+  const x = a.task;
+  const y = b.task;
+  return (
+    a.expected === b.expected &&
+    a.dragging === b.dragging &&
+    a.over === b.over &&
+    a.dnd === b.dnd &&
+    x.id === y.id &&
+    x.title === y.title &&
+    x.size === y.size &&
+    x.status === y.status &&
+    x.priority === y.priority &&
+    x.pomodorosSpent === y.pomodorosSpent
+  );
+}
+
+const TaskRow = memo(function TaskRow({ task: t, expected, dragging, over, dnd }: RowProps) {
   const dispatch = useSakura((s) => s.dispatch);
   const title = useRef<HTMLInputElement>(null);
   const commitTitle = () => {
@@ -178,16 +218,16 @@ function TaskRow({ task: t, expected, dragging, over, ...dnd }: RowProps) {
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", t.id);
-        dnd.onDragStart();
+        dnd.start(t.id);
       }}
-      onDragEnd={dnd.onDragEnd}
+      onDragEnd={dnd.end}
       onDragOver={(e) => {
         e.preventDefault();
-        dnd.onDragOver();
+        dnd.over(t.id);
       }}
       onDrop={(e) => {
         e.preventDefault();
-        dnd.onDrop();
+        dnd.drop(t.id);
       }}
     >
       <span className={styles.grip} aria-hidden="true" title="Glisser pour réordonner">
@@ -269,4 +309,4 @@ function TaskRow({ task: t, expected, dragging, over, ...dnd }: RowProps) {
       </select>
     </li>
   );
-}
+}, sameRow);

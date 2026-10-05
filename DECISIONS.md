@@ -261,3 +261,19 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 ### D-035 · Synchronisation : testée à deux instances sur le vrai disque
 - `tests/twoMacs.test.ts` : deux `DataStore` sur un même dossier réel. B voit les écritures de A ; A refuse d'écraser la version de B avant relecture ; un fichier remplacé par iCloud avec une date plus ancienne est détecté (comparaison d'égalité de la date, pas « plus récent que »).
 - Le widget vérifie la date du fichier toutes les 5 s et relit si elle a changé et que rien n'est en attente d'écriture.
+
+---
+
+## Phase 6 — Qualité et livraison
+
+### D-036 · Performance : ce qui a été corrigé
+- Ensō sans transition CSS : mis à jour une fois par seconde (57 % → 2,5 % CPU en focus, rendu logiciel).
+- Vue complète créée à l'ouverture et détruite à la fermeture : un processus web de moins toute la journée (~60 à 100 Mo).
+- Widget replié : seule la ligne compacte est rendue ; la partie déployée est montée à l'ouverture.
+- Liste de tâches : lignes mémoïsées, comparées par valeur (l'état arrive par copie entre fenêtres).
+- Mesures et limites dans `docs/QA.md`. Le budget macOS (< 2 % CPU, < 150 Mo) reste à confirmer sur le Mac : l'environnement de mesure n'a ni macOS ni GPU.
+
+### D-037 · Livraison
+- Version 1.0.0.
+- Icône : ensō à l'encre sur papier washi, un pétale de sakura posé sur le trait (générée depuis le tracé du widget, cohérente avec lui). Icône de barre de menu : l'ensō seul, image « template ».
+- Pas de tag `v1.0.0` poussé automatiquement : publier une Release est un acte public, déclenché par `git tag v1.0.0 && git push origin v1.0.0` après validation sur le Mac (README).

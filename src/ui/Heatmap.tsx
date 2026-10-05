@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { adaptiveThresholds, buildDayMap, heatGrid, heatLevel } from "../core/stats";
 import type { DataFile } from "../core/types";
 import { formatDayKey, plural } from "./format";
@@ -12,7 +12,7 @@ interface Props {
 }
 
 /** Grille façon GitHub : une case par jour, couleur = points des tâches terminées (D-013). */
-export function Heatmap({ data, today, weeks, size = "mini" }: Props) {
+export const Heatmap = memo(function Heatmap({ data, today, weeks, size = "mini" }: Props) {
   const days = useMemo(
     () => buildDayMap(data.tasks, data.sessions, data.settings.scale),
     [data.tasks, data.sessions, data.settings.scale],
@@ -48,4 +48,4 @@ export function Heatmap({ data, today, weeks, size = "mini" }: Props) {
       })}
     </div>
   );
-}
+});

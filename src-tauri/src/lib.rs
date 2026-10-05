@@ -5,7 +5,7 @@ mod store;
 mod tray;
 mod widget;
 
-use tauri::{Manager, WindowEvent};
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -35,15 +35,6 @@ pub fn run() {
             tray::tray_update,
             tray::quit_app,
         ])
-        .on_window_event(|window, event| {
-            // Fermer la vue complète la cache : le widget, propriétaire des données, continue.
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "main" {
-                    api.prevent_close();
-                    let _ = window.hide();
-                }
-            }
-        })
         .setup(|app| {
             // Mode accessoire : pas d'icône dans le Dock, l'app vit dans la barre de menu.
             #[cfg(target_os = "macos")]

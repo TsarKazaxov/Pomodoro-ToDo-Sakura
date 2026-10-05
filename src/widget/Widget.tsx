@@ -251,143 +251,149 @@ function WidgetReady({ data }: { data: DataFile }) {
         <span className={`${styles.pill} ${pillClass}`}>{pill}</span>
       </div>
 
-      <div className={styles.expanded} aria-hidden={!open}>
-        <div className={styles.timer}>
-          <div className={styles.bigEnso}>
-            {enso}
-            <div className={styles.bigTime}>{time}</div>
-          </div>
-          <div className={styles.side}>
-            <span className={`${styles.pill} ${pillClass}`}>{pill}</span>
-            <div className={styles.phaseLine}>{phaseLine}</div>
-            <div className={styles.ctrls}>
-              <button
-                className={`${styles.btn} ${styles.primary}`}
-                onClick={() => dispatch({ type: "timer/toggle" })}
-              >
-                {t.phase === "idle" ? fr.start : paused ? fr.resume : fr.suspend}
-              </button>
-              <button className={styles.btn} onClick={() => dispatch({ type: "timer/skip" })}>
-                {fr.skip}
-              </button>
-              <button
-                className={`${styles.btn} ${styles.icon}`}
-                onClick={() => dispatch({ type: "timer/reset" })}
-                aria-label={fr.reset}
-                title={fr.reset}
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
+      {/* Partie déployée montée seulement quand elle sert : replié, le widget ne met à jour
+          que la ligne compacte chaque seconde (D-036). */}
+      {open && (
+        <div className={styles.expanded} aria-hidden={!open}>
+          <div className={styles.timer}>
+            <div className={styles.bigEnso}>
+              {enso}
+              <div className={styles.bigTime}>{time}</div>
+            </div>
+            <div className={styles.side}>
+              <span className={`${styles.pill} ${pillClass}`}>{pill}</span>
+              <div className={styles.phaseLine}>{phaseLine}</div>
+              <div className={styles.ctrls}>
+                <button
+                  className={`${styles.btn} ${styles.primary}`}
+                  onClick={() => dispatch({ type: "timer/toggle" })}
                 >
-                  <path d="M2.5 8a5.5 5.5 0 1 0 1.7-4" />
-                  <path d="M2.3 1.8v3h3" />
-                </svg>
-              </button>
+                  {t.phase === "idle" ? fr.start : paused ? fr.resume : fr.suspend}
+                </button>
+                <button className={styles.btn} onClick={() => dispatch({ type: "timer/skip" })}>
+                  {fr.skip}
+                </button>
+                <button
+                  className={`${styles.btn} ${styles.icon}`}
+                  onClick={() => dispatch({ type: "timer/reset" })}
+                  aria-label={fr.reset}
+                  title={fr.reset}
+                >
+                  <svg
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M2.5 8a5.5 5.5 0 1 0 1.7-4" />
+                    <path d="M2.3 1.8v3h3" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div>
-          <h3 className={styles.sectionTitle}>{fr.currentTask}</h3>
-          <select
-            className={styles.select}
-            value={cur?.id ?? ""}
-            onChange={(e) => dispatch({ type: "task/setCurrent", id: e.target.value || null })}
-            aria-label={fr.currentTask}
-          >
-            <option value="">{fr.freeFocus}</option>
-            {choices.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.title} · {x.size}
-              </option>
-            ))}
-          </select>
-          {cur ? (
-            <Dots
-              spent={cur.pomodorosSpent}
-              expected={data.settings.scale[cur.size].expectedPomodoros}
-              xl={cur.size === "XL"}
-            />
-          ) : (
-            <p className={styles.hintMuted}>{fr.freeFocusHint}</p>
-          )}
-          {cur && shouldSplit(cur, data.settings.scale) && (
-            <p className={styles.hint}>{fr.splitHint}</p>
-          )}
-        </div>
-
-        <div className={styles.prioBlock}>
-          <div className={styles.sectionRow}>
-            <h3 className={styles.sectionTitle}>{fr.priorities}</h3>
-            {prio.length > 0 && <span className={styles.count}>{fr.pinned(prio.length)}</span>}
-          </div>
-          {open3.length === 0 ? (
-            <p className={styles.empty}>
-              {fr.noPriority} <code>{fr.quickAddExample}</code>.
-            </p>
-          ) : (
-            <ul className={styles.prio}>
-              {open3.map((x) => (
-                <li key={x.id}>
-                  <input
-                    type="checkbox"
-                    className={styles.tick}
-                    checked={false}
-                    onChange={() => dispatch({ type: "task/setStatus", id: x.id, status: "done" })}
-                    aria-label={fr.complete(x.title)}
-                  />
-                  <span className={styles.prioTitle} title={x.title}>
-                    {x.title}
-                  </span>
-                  <span className={`${styles.size} ${x.size === "XL" ? styles.xl : ""}`}>
-                    {x.size}
-                  </span>
-                </li>
+          <div>
+            <h3 className={styles.sectionTitle}>{fr.currentTask}</h3>
+            <select
+              className={styles.select}
+              value={cur?.id ?? ""}
+              onChange={(e) => dispatch({ type: "task/setCurrent", id: e.target.value || null })}
+              aria-label={fr.currentTask}
+            >
+              <option value="">{fr.freeFocus}</option>
+              {choices.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.title} · {x.size}
+                </option>
               ))}
-              {prio.length > 3 && <li className={styles.more}>{fr.more(prio.length - 3)}</li>}
-            </ul>
-          )}
-          <input
-            ref={quickInput}
-            className={styles.quick}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && draft.trim()) {
-                dispatch({ type: "task/quickAdd", raw: draft, priority: true });
-                setDraft("");
-              } else if (e.key === "Escape") {
-                (e.target as HTMLInputElement).blur();
-              }
-            }}
-            placeholder={fr.quickAddPlaceholder}
-            aria-label={fr.quickAddPlaceholder}
-          />
-        </div>
-
-        <div className={styles.heatRow}>
-          <Heatmap data={data} today={today} weeks={12} />
-          <div className={styles.todayPts}>
-            <b key={pop} className={pop ? styles.popped : undefined}>
-              {todayPoints}
-            </b>
-            <span>{fr.todayPoints}</span>
+            </select>
+            {cur ? (
+              <Dots
+                spent={cur.pomodorosSpent}
+                expected={data.settings.scale[cur.size].expectedPomodoros}
+                xl={cur.size === "XL"}
+              />
+            ) : (
+              <p className={styles.hintMuted}>{fr.freeFocusHint}</p>
+            )}
+            {cur && shouldSplit(cur, data.settings.scale) && (
+              <p className={styles.hint}>{fr.splitHint}</p>
+            )}
           </div>
-          {comboVisible(combo, now) && (
-            <span className={styles.combo}>{fr.combo(combo.count)}</span>
-          )}
-        </div>
 
-        <button className={styles.openLink} onClick={() => void showMain()}>
-          {fr.open}
-        </button>
-      </div>
+          <div className={styles.prioBlock}>
+            <div className={styles.sectionRow}>
+              <h3 className={styles.sectionTitle}>{fr.priorities}</h3>
+              {prio.length > 0 && <span className={styles.count}>{fr.pinned(prio.length)}</span>}
+            </div>
+            {open3.length === 0 ? (
+              <p className={styles.empty}>
+                {fr.noPriority} <code>{fr.quickAddExample}</code>.
+              </p>
+            ) : (
+              <ul className={styles.prio}>
+                {open3.map((x) => (
+                  <li key={x.id}>
+                    <input
+                      type="checkbox"
+                      className={styles.tick}
+                      checked={false}
+                      onChange={() =>
+                        dispatch({ type: "task/setStatus", id: x.id, status: "done" })
+                      }
+                      aria-label={fr.complete(x.title)}
+                    />
+                    <span className={styles.prioTitle} title={x.title}>
+                      {x.title}
+                    </span>
+                    <span className={`${styles.size} ${x.size === "XL" ? styles.xl : ""}`}>
+                      {x.size}
+                    </span>
+                  </li>
+                ))}
+                {prio.length > 3 && <li className={styles.more}>{fr.more(prio.length - 3)}</li>}
+              </ul>
+            )}
+            <input
+              ref={quickInput}
+              className={styles.quick}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && draft.trim()) {
+                  dispatch({ type: "task/quickAdd", raw: draft, priority: true });
+                  setDraft("");
+                } else if (e.key === "Escape") {
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              placeholder={fr.quickAddPlaceholder}
+              aria-label={fr.quickAddPlaceholder}
+            />
+          </div>
+
+          <div className={styles.heatRow}>
+            <Heatmap data={data} today={today} weeks={12} />
+            <div className={styles.todayPts}>
+              <b key={pop} className={pop ? styles.popped : undefined}>
+                {todayPoints}
+              </b>
+              <span>{fr.todayPoints}</span>
+            </div>
+            {comboVisible(combo, now) && (
+              <span className={styles.combo}>{fr.combo(combo.count)}</span>
+            )}
+          </div>
+
+          <button className={styles.openLink} onClick={() => void showMain()}>
+            {fr.open}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

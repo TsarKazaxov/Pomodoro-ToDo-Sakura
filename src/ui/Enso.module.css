@@ -17,6 +17,3 @@
 .bloom .ink {
   transition-duration: 0.15s;
 }
-.reveal {
-  transition: stroke-dashoffset 1s linear;
-}

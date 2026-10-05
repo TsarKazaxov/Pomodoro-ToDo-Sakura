@@ -86,11 +86,22 @@ pub fn widget_layout(
     Ok(())
 }
 
+/// La vue complète n'existe que lorsqu'elle est ouverte : fermée, elle libère son processus web
+/// (~100 Mo, D-036). L'état vit dans le widget, rien n'est perdu.
 #[tauri::command]
 pub fn show_main(app: AppHandle) -> Result<(), String> {
-    let w = app
-        .get_webview_window("main")
-        .ok_or("fenêtre principale absente")?;
+    let w = match app.get_webview_window("main") {
+        Some(w) => w,
+        None => WebviewWindowBuilder::new(&app, "main", WebviewUrl::App("index.html".into()))
+            .title("Sakura")
+            .inner_size(960.0, 680.0)
+            .min_inner_size(720.0, 520.0)
+            .center()
+            .disable_drag_drop_handler()
+            .visible(false)
+            .build()
+            .map_err(|e| e.to_string())?,
+    };
     w.unminimize().ok();
     w.show().map_err(|e| e.to_string())?;
     w.set_focus().map_err(|e| e.to_string())
@@ -99,7 +110,7 @@ pub fn show_main(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn hide_main(app: AppHandle) -> Result<(), String> {
     match app.get_webview_window("main") {
-        Some(w) => w.hide().map_err(|e| e.to_string()),
+        Some(w) => w.close().map_err(|e| e.to_string()),
         None => Ok(()),
     }
 }
