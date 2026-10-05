@@ -5,7 +5,7 @@
 import { applyTransition } from "../core/apply";
 import { addTask, moveTask, parseQuickAdd, setCurrent, setStatus, updateTask } from "../core/tasks";
 import * as timer from "../core/timer";
-import type { DataFile, Settings, Task, TaskStatus } from "../core/types";
+import type { Corner, DataFile, Settings, Task, TaskStatus } from "../core/types";
 
 export type Action =
   | { type: "timer/toggle" }
@@ -17,7 +17,10 @@ export type Action =
   | { type: "task/setCurrent"; id: string | null }
   | { type: "task/update"; id: string; patch: Partial<Pick<Task, "title" | "size" | "priority">> }
   | { type: "task/move"; id: string; beforeId: string | null }
-  | { type: "settings/update"; patch: Partial<Settings> };
+  | { type: "settings/update"; patch: Partial<Settings> }
+  | { type: "onboarding/complete"; focusMinutes: number; corner: Corner; firstTask: string }
+  /** Import d'un export JSON : remplace tâches, sessions et réglages. */
+  | { type: "data/import"; data: DataFile };
 
 /** Ce qui mérite une récompense ou un signal à l'utilisateur. */
 export type Effect =
@@ -112,5 +115,31 @@ export function reduce(data: DataFile, action: Action, now: number): Reduced {
       };
     case "settings/update":
       return { data: { ...data, settings: { ...data.settings, ...action.patch } }, effects: [] };
+    case "onboarding/complete": {
+      let tasks = data.tasks;
+      const parsed = parseQuickAdd(action.firstTask);
+      if (parsed) {
+        tasks = addTask(tasks, { ...parsed, priority: true }, now);
+        tasks = setCurrent(tasks, tasks[0]!.id, now);
+      }
+      const settings = {
+        ...data.settings,
+        focusMinutes: action.focusMinutes,
+        corner: action.corner,
+        onboarded: true,
+      };
+      return { data: { ...data, tasks, settings }, effects: [] };
+    }
+    case "data/import":
+      // On garde l'appareil et le minuteur en cours : seul le contenu est remplacé.
+      return {
+        data: {
+          ...action.data,
+          deviceId: data.deviceId,
+          timer: data.timer,
+          settings: { ...action.data.settings, onboarded: true },
+        },
+        effects: [],
+      };
   }
 }

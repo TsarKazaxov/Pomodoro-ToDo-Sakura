@@ -96,6 +96,14 @@ pub fn show_main(app: AppHandle) -> Result<(), String> {
     w.set_focus().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn hide_main(app: AppHandle) -> Result<(), String> {
+    match app.get_webview_window("main") {
+        Some(w) => w.hide().map_err(|e| e.to_string()),
+        None => Ok(()),
+    }
+}
+
 static RAIN_SEQ: AtomicU32 = AtomicU32::new(0);
 const RAIN_LIFETIME: Duration = Duration::from_millis(5_500);
 

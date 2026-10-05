@@ -145,6 +145,13 @@ pub fn default_data_dir(app: tauri::AppHandle) -> CmdResult<String> {
         .into_owned())
 }
 
+/// Dossier de configuration propre à ce Mac (emplacement choisi pour les données, D-029).
+#[tauri::command]
+pub fn app_config_dir(app: tauri::AppHandle) -> CmdResult<String> {
+    let dir = app.path().app_config_dir().map_err(err)?;
+    Ok(dir.to_string_lossy().into_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

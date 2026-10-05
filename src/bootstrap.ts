@@ -1,11 +1,12 @@
 // Démarrage d'une fenêtre : le widget devient propriétaire des données, la vue complète cliente.
 
-import { inTauri, petalRain, windowLabel } from "./platform";
+import { inTauri, petalRain, showMain, windowLabel } from "./platform";
 import { initClient, initOwner } from "./state/store";
 import { tauriTransport } from "./state/tauriTransport";
 import { DataStore } from "./storage/dataStore";
 import { MemoryFs } from "./storage/memoryFs";
-import { defaultDataDir, tauriFs } from "./storage/tauriFs";
+import { resolveDataDir, saveDataDir } from "./storage/location";
+import { tauriFs } from "./storage/tauriFs";
 import { chime } from "./ui/sound";
 import { localTransport } from "./state/localTransport";
 
@@ -26,11 +27,25 @@ export function startWindow(): "widget" | "main" | "rain" {
   const transport = inTauri ? tauriTransport : localTransport;
   if (label === "widget") {
     void (async () => {
-      const dir = inTauri ? await defaultDataDir() : "/apercu";
+      const fs = inTauri ? tauriFs : new MemoryFs();
+      // Aperçu navigateur : `?seed=1` charge les données de démonstration (`&load=1000` : 1 000 tâches de plus).
+      if (!inTauri && import.meta.env.DEV) {
+        const q = new URLSearchParams(location.search);
+        if (q.has("seed")) {
+          const { demoData } = await import("./dev/seed");
+          const { serialize } = await import("./core/schema");
+          await fs.mkdirp("/apercu");
+          await fs.writeAtomic(
+            "/apercu/sakura-data.json",
+            serialize(demoData(Date.now(), Number(q.get("load")) || 0)),
+          );
+        }
+      }
       await initOwner({
         transport,
         label,
-        disk: new DataStore(inTauri ? tauriFs : new MemoryFs(), dir),
+        dataDir: inTauri ? await resolveDataDir() : "/apercu",
+        openStore: (dir) => new DataStore(fs, dir),
         deviceId: deviceId(),
         hooks: {
           playChime: (strikes, gain) => chime(strikes, gain),
@@ -38,6 +53,11 @@ export function startWindow(): "widget" | "main" | "rain" {
             if (tier >= 4) void petalRain("screen");
             else if (origin === "widget") void petalRain("around");
           },
+          // Premier lancement ou fichier à réparer : la vue complète s'ouvre d'elle-même.
+          afterLoad: (s) => {
+            if (s.status !== "ready" || !s.data?.settings.onboarded) void showMain();
+          },
+          saveLocation: (dir) => (inTauri ? saveDataDir(dir) : Promise.resolve()),
         },
       });
     })();

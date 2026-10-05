@@ -66,4 +66,43 @@ describe("réducteur", () => {
     ).data;
     expect(d.settings).toMatchObject({ corner: "bottom-left", focusMinutes: 25 });
   });
+
+  it("premier lancement : réglages, première tâche épinglée et en cours", () => {
+    const d = reduce(
+      createEmptyData("mac-a", T0),
+      {
+        type: "onboarding/complete",
+        focusMinutes: 45,
+        corner: "top-left",
+        firstTask: "Synthèse #M",
+      },
+      T0,
+    ).data;
+    expect(d.settings).toMatchObject({ focusMinutes: 45, corner: "top-left", onboarded: true });
+    expect(d.tasks[0]).toMatchObject({
+      title: "Synthèse",
+      size: "M",
+      priority: true,
+      status: "doing",
+    });
+  });
+
+  it("premier lancement sans tâche", () => {
+    const d = reduce(
+      createEmptyData("mac-a", T0),
+      { type: "onboarding/complete", focusMinutes: 25, corner: "top-right", firstTask: "" },
+      T0,
+    ).data;
+    expect(d.tasks).toEqual([]);
+    expect(d.settings.onboarded).toBe(true);
+  });
+
+  it("l'import remplace le contenu mais garde l'appareil et le minuteur", () => {
+    const mine = reduce(base(), { type: "timer/toggle" }, T0).data;
+    const other = { ...createEmptyData("mac-b", T0), tasks: [] };
+    const d = reduce(mine, { type: "data/import", data: other }, T0).data;
+    expect(d.tasks).toEqual([]);
+    expect(d.deviceId).toBe("mac-a");
+    expect(d.timer).toBe(mine.timer);
+  });
 });

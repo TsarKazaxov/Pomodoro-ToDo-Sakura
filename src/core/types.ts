@@ -64,8 +64,6 @@ export interface Settings {
   soundVolume: number;
   theme: Theme;
   launchAtLogin: boolean;
-  /** Dossier du fichier de données ; `null` = emplacement par défaut (iCloud Drive). */
-  dataDir: string | null;
   /** Premier lancement terminé. */
   onboarded: boolean;
 }

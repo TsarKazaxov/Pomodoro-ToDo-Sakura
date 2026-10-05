@@ -42,7 +42,6 @@ export function defaultSettings(): Settings {
     soundVolume: 0.6,
     theme: "auto",
     launchAtLogin: true,
-    dataDir: null,
     onboarded: false,
   };
 }
@@ -173,7 +172,6 @@ function readSettings(v: unknown): Settings {
     soundVolume: isNum(v.soundVolume) ? Math.min(1, Math.max(0, v.soundVolume)) : d.soundVolume,
     theme: oneOf(THEMES, v.theme) ? v.theme : d.theme,
     launchAtLogin: typeof v.launchAtLogin === "boolean" ? v.launchAtLogin : d.launchAtLogin,
-    dataDir: isStr(v.dataDir) && v.dataDir ? v.dataDir : null,
     onboarded: v.onboarded === true,
   };
 }

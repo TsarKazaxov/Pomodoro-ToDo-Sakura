@@ -1,7 +1,7 @@
 // Point d'entrée commun aux fenêtres : chacune affiche sa vue selon son libellé.
 
 import { useEffect } from "react";
-import { MainScreen } from "./main/MainScreen";
+import { MainApp } from "./main/MainApp";
 import { PetalRain } from "./overlay/PetalRain";
 import { useSakura } from "./state/store";
 import { useThemeAttribute } from "./ui/hooks";
@@ -15,5 +15,5 @@ export function App({ view }: { view: "widget" | "main" | "rain" }) {
   }, [view]);
   if (view === "rain") return <PetalRain />;
   if (view === "widget") return <Widget />;
-  return <MainScreen />;
+  return <MainApp />;
 }

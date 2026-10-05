@@ -215,3 +215,24 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - **Survol d'une fenêtre inactive** : WebKit transmet en principe `mouseenter` aux fenêtres non actives. Sinon, plan B : détection du curseur côté Rust (sondage de la position).
 - **App Nap** : macOS peut ralentir les minuteries JS d'une app en arrière-plan. Le temps affiché reste juste (horodatages), mais le son de fin pourrait arriver avec retard. Traité en Phase 5.
 - **Apps en plein écran** : le widget n'apparaît par-dessus qu'en mode accessoire + `FullScreenAuxiliary` (Phase 5).
+
+---
+
+## Phase 4 — Vue complète
+
+### D-029 · Emplacement des données : propre à chaque Mac
+- L'emplacement ne peut pas être stocké dans le fichier de données (il faut savoir où le lire). Il vit dans `~/Library/Application Support/dev.sakura.pomodoro/location.json` ; par défaut iCloud Drive/Sakura, sinon le dossier de l'app.
+- « Changer de dossier » : si le nouveau dossier n'a pas de fichier Sakura, on y écrit nos données. S'il en a un, on demande : l'utiliser, ou le remplacer par nos données.
+- `dataDir` retiré des réglages du fichier (ajouté en Phase 2, jamais publié : pas de migration nécessaire).
+
+### D-030 · Import et export
+- Export : le fichier de données tel quel (`sakura-export-AAAA-MM-JJ.json`).
+- Import : validé comme un fichier de données, puis confirmation (« Remplacer tes N tâches par les M du fichier ? »). Remplace tâches, sessions et réglages ; garde ce Mac et le minuteur en cours. Les données remplacées restent dans la sauvegarde du jour.
+
+### D-031 · Vue complète
+- Cachée au démarrage ; s'ouvre d'elle-même au premier lancement et quand le fichier est illisible.
+- Fermer la fenêtre la cache.
+- Glisser-déposer HTML réactivé (`dragDropEnabled: false`, sinon macOS le réserve aux fichiers).
+- Filtre par défaut des tâches : « Ouvertes » (à faire + en cours). Le brief ne précisait pas ; c'est la vue de travail.
+- Premier lancement : la première tâche est épinglée et devient la tâche en cours.
+- Données de démonstration en développement uniquement : `npm run dev` puis `/?view=widget&seed=1` (et `&load=1000` pour 1 000 tâches de plus).

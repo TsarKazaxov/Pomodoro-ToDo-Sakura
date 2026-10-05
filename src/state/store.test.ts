@@ -53,7 +53,8 @@ async function boot() {
   stop = await initOwner({
     transport: tr,
     label: "widget",
-    disk: new DataStore(fs, DIR, () => now),
+    dataDir: DIR,
+    openStore: (dir) => new DataStore(fs, dir, () => now),
     deviceId: "mac-a",
     now: () => now,
     hooks: { playChime: (n) => chimes.push(n), screenRain: (tier) => rains.push(tier) },
@@ -189,5 +190,37 @@ describe("fenêtre propriétaire", () => {
     dispatch({ type: "task/quickAdd", raw: "A", priority: false });
     await vi.advanceTimersByTimeAsync(500);
     expect(fs.files.get(`${DIR}/${DATA_FILE}`)!.text).toBe("{oups");
+  });
+
+  it("déménage les données vers un nouveau dossier (D-029)", async () => {
+    await boot();
+    dispatch({ type: "task/quickAdd", raw: "À garder", priority: false });
+    useSakura.getState().relocate("/ailleurs", "ours");
+    await vi.advanceTimersByTimeAsync(10);
+    expect(fs.files.get(`/ailleurs/${DATA_FILE}`)!.text).toContain("À garder");
+    expect(useSakura.getState().dataDir).toBe("/ailleurs");
+  });
+
+  it("adopte le fichier déjà présent dans le nouveau dossier", async () => {
+    await boot();
+    await fs.mkdirp("/ailleurs");
+    const other = createEmptyData("mac-b", now);
+    other.tasks = [
+      {
+        id: "y",
+        title: "Là-bas",
+        size: "S",
+        priority: false,
+        status: "todo",
+        createdAt: other.updatedAt,
+        pomodorosSpent: 0,
+        order: 0,
+        updatedAt: other.updatedAt,
+      },
+    ];
+    fs.externalWrite(`/ailleurs/${DATA_FILE}`, serialize(other));
+    useSakura.getState().relocate("/ailleurs", "theirs");
+    await vi.advanceTimersByTimeAsync(10);
+    expect(ids()).toEqual(["y"]);
   });
 });

@@ -6,6 +6,7 @@ use tauri::{Manager, WindowEvent};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             store::fs_read_text,
             store::fs_write_atomic,
@@ -14,8 +15,10 @@ pub fn run() {
             store::fs_mkdirp,
             store::fs_mtime,
             store::default_data_dir,
+            store::app_config_dir,
             widget::widget_layout,
             widget::show_main,
+            widget::hide_main,
             widget::petal_rain,
         ])
         .on_window_event(|window, event| {

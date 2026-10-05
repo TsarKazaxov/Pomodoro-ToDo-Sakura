@@ -19,6 +19,8 @@ export interface Snapshot {
   detail: string;
   backups: string[];
   data: DataFile | null;
+  /** Dossier du fichier de données sur ce Mac. */
+  dataDir: string;
 }
 
 export type Reward =
@@ -41,13 +43,20 @@ export interface Transport {
 }
 
 export type ClientMessage =
-  { kind: "action"; action: Action; origin: string } | { kind: "restore"; name: string };
+  | { kind: "action"; action: Action; origin: string }
+  | { kind: "restore"; name: string }
+  /** Nouvel emplacement. `keep` : garder nos données (`ours`) ou celles déjà là-bas (`theirs`). */
+  | { kind: "relocate"; dir: string; keep: "ours" | "theirs" };
 
 /** Effets de bord du propriétaire : son, pluie de pétales plein écran. */
 export interface OwnerHooks {
   playChime?(strikes: number, gain: number): void;
   /** Pluie hors de la fenêtre d'origine, paliers 3 et plus (D-027). */
   screenRain?(tier: number, origin: string): void;
+  /** Après chaque chargement du fichier (premier lancement, fichier illisible…). */
+  afterLoad?(s: Snapshot): void;
+  /** Mémorise l'emplacement choisi, sur ce Mac (D-029). */
+  saveLocation?(dir: string): Promise<void>;
 }
 
 interface State extends Snapshot {
@@ -55,6 +64,7 @@ interface State extends Snapshot {
   combo: ComboState;
   dispatch(action: Action): void;
   restore(name: string): void;
+  relocate(dir: string, keep: "ours" | "theirs"): void;
 }
 
 const SAVE_DELAY_MS = 300;
@@ -64,6 +74,7 @@ type Ctx = {
   transport: Transport;
   label: string;
   disk?: DataStore;
+  openStore?: (dir: string) => DataStore;
   hooks: OwnerHooks;
   now: () => number;
   saveTimer?: ReturnType<typeof setTimeout>;
@@ -85,6 +96,7 @@ export const useSakura = create<State>((_set, get) => ({
   detail: "",
   backups: [],
   data: null,
+  dataDir: "",
   combo: emptyCombo(),
 
   dispatch(action) {
@@ -101,13 +113,19 @@ export const useSakura = create<State>((_set, get) => ({
     if (get().role === "client") ctx.transport.sendAction({ kind: "restore", name });
     else void restoreOwner(name);
   },
+
+  relocate(dir, keep) {
+    if (!ctx) return;
+    if (get().role === "client") ctx.transport.sendAction({ kind: "relocate", dir, keep });
+    else void relocateOwner(dir, keep);
+  },
 }));
 
 // ---------- propriétaire ----------
 
 function snapshot(): Snapshot {
-  const { status, detail, backups, data } = useSakura.getState();
-  return { status, detail, backups, data };
+  const { status, detail, backups, data, dataDir } = useSakura.getState();
+  return { status, detail, backups, data, dataDir };
 }
 
 function broadcast() {
@@ -123,6 +141,7 @@ function applyLoad(r: LoadResult) {
     useSakura.setState({ status: "too_new", detail: r.detail, data: null });
   else useSakura.setState({ status: r.kind, data: null });
   broadcast();
+  ctx?.hooks.afterLoad?.(snapshot());
 }
 
 async function persist() {
@@ -194,6 +213,37 @@ async function restoreOwner(name: string) {
   if (ctx?.disk) applyLoad(await ctx.disk.restoreBackup(name));
 }
 
+/**
+ * Change l'emplacement du fichier (D-029). `ours` : nos données sont écrites là-bas (on écrase
+ * un éventuel fichier). `theirs` : on adopte le fichier déjà présent là-bas.
+ */
+async function relocateOwner(dir: string, keep: "ours" | "theirs") {
+  if (!ctx?.openStore) return;
+  await flush();
+  const next = ctx.openStore(dir);
+  try {
+    if (keep === "theirs") {
+      const r = await next.load();
+      if (r.kind !== "ok") throw new Error(`Le fichier de ${dir} n'est pas lisible (${r.kind}).`);
+      ctx.disk = next;
+      useSakura.setState({ dataDir: dir });
+      applyLoad(r);
+    } else {
+      const data = useSakura.getState().data;
+      if (!data) return;
+      await next.load();
+      await next.save(data, { force: true });
+      ctx.disk = next;
+      useSakura.setState({ dataDir: dir });
+      broadcast();
+    }
+    await ctx.hooks.saveLocation?.(dir);
+  } catch (e) {
+    useSakura.setState({ detail: e instanceof Error ? e.message : String(e) });
+    broadcast();
+  }
+}
+
 /** Relit le fichier s'il a été modifié ailleurs (autre Mac via iCloud) et rien n'est en attente. */
 export async function checkExternalChange(): Promise<boolean> {
   if (!ctx?.disk || ctx.saveTimer || ctx.saving) return false;
@@ -205,31 +255,35 @@ export async function checkExternalChange(): Promise<boolean> {
 export async function initOwner(opts: {
   transport: Transport;
   label: string;
-  disk: DataStore;
+  dataDir: string;
+  openStore: (dir: string) => DataStore;
   deviceId: string;
   hooks?: OwnerHooks;
   now?: () => number;
 }): Promise<() => void> {
+  const disk = opts.openStore(opts.dataDir);
   ctx = {
     transport: opts.transport,
     label: opts.label,
-    disk: opts.disk,
+    disk,
+    openStore: opts.openStore,
     hooks: opts.hooks ?? {},
     now: opts.now ?? Date.now,
     saving: false,
   };
-  useSakura.setState({ role: "owner" });
+  useSakura.setState({ role: "owner", dataDir: opts.dataDir });
   const t = opts.transport;
   t.onAction((msg) => {
     if (msg.kind === "action") applyOwner(msg.action, msg.origin);
-    else void restoreOwner(msg.name);
+    else if (msg.kind === "restore") void restoreOwner(msg.name);
+    else void relocateOwner(msg.dir, msg.keep);
   });
   t.onRequestState(broadcast);
   try {
-    const r = await opts.disk.load();
+    const r = await disk.load();
     if (r.kind === "missing") {
       const data = createEmptyData(opts.deviceId, ctx.now());
-      await opts.disk.save(data);
+      await disk.save(data);
       applyLoad({ kind: "ok", data });
     } else applyLoad(r);
   } catch (e) {
@@ -273,6 +327,7 @@ export function __resetStore() {
     detail: "",
     backups: [],
     data: null,
+    dataDir: "",
     combo: emptyCombo(),
   });
 }
