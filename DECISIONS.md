@@ -185,3 +185,33 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - CI : tests front + Rust sur Linux à chaque PR ; `.dmg` universel sur macOS à chaque PR, sur `main` et sur les tags `v*` (publié en Release).
 - Icône provisoire générée depuis l'ensō du prototype ; la vraie arrive en Phase 6.
 - Identifiant d'app : `dev.sakura.pomodoro`.
+
+---
+
+## Phase 3 — Widget
+
+### D-026 · Une fenêtre propriétaire des données : le widget
+- **Contexte** : deux fenêtres (widget, vue complète) doivent partager un seul état (brief §5) sans se marcher dessus dans le fichier.
+- **Décision** : le widget, toujours ouvert, est **propriétaire**. Il charge et écrit le fichier, fait avancer le minuteur (1 tick/s), calcule les récompenses, diffuse l'état par événement Tauri `sakura://state`. La vue complète est **cliente** : elle envoie des actions (`sakura://action`) et affiche l'état reçu ; à l'ouverture elle le demande (`sakura://hello`).
+- Toutes les modifications passent par un réducteur pur (`src/state/actions.ts`), testé.
+- Écritures regroupées (300 ms), vérification d'une modification externe toutes les 5 s (D-014).
+- Fermer la vue complète la **cache** (le widget continue).
+- En aperçu navigateur (`npm run dev`), un `BroadcastChannel` remplace les événements : `/?view=widget` dans un onglet, `/` dans un autre.
+
+### D-027 · Pétales au-delà du widget : fenêtre de pluie éphémère
+- La fenêtre widget ne fait que 380 × 540 : des pétales qui en sortent seraient coupés.
+- Paliers 1–2 et fin de focus : dans la carte du widget. Palier 3 : bourrasque autour du widget ; palier 4 : pluie sur tout l'écran. Ces deux-là ouvrent une fenêtre transparente plein écran (`petal_rain`), qui laisse passer les clics, ne prend pas le focus et se ferme seule après 5,5 s.
+- Une tâche cochée depuis la vue complète fait tomber les pétales dans la vue complète (sa fenêtre est grande) ; le palier 4 déclenche la pluie plein écran quelle que soit l'origine.
+- Fenêtres transparentes : `macOSPrivateApi` activé (sans conséquence hors App Store).
+
+### D-028 · Fenêtre widget
+- Fenêtre transparente sans bordure, 260 × 84 (compact) / 380 × 540 (déployé) : la carte + 10 px de marge pour son ombre CSS (pas l'ombre native, mal calculée sur une fenêtre transparente qui change de taille).
+- Ancrage calculé en Rust sur la **zone utile** de l'écran (hors barre de menu et Dock) ; position puis taille dans le même appel. Déploiement : la fenêtre s'agrandit d'abord, puis la carte s'anime ; repli : la carte s'anime, puis la fenêtre se réduit.
+- `acceptFirstMouse` : le premier clic agit sans d'abord activer l'app.
+- Polices : sous-ensemble latin de `@fontsource` (≈ 100 Ko), embarqué par Vite.
+- Pas de filtre SVG sur l'ensō (le prototype en avait un) : la rugosité est dans le tracé.
+
+### Risques à vérifier sur le Mac (non testables dans le conteneur Linux)
+- **Survol d'une fenêtre inactive** : WebKit transmet en principe `mouseenter` aux fenêtres non actives. Sinon, plan B : détection du curseur côté Rust (sondage de la position).
+- **App Nap** : macOS peut ralentir les minuteries JS d'une app en arrière-plan. Le temps affiché reste juste (horodatages), mais le son de fin pourrait arriver avec retard. Traité en Phase 5.
+- **Apps en plein écran** : le widget n'apparaît par-dessus qu'en mode accessoire + `FullScreenAuxiliary` (Phase 5).

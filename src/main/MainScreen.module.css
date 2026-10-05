@@ -1,0 +1,30 @@
+.main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 16px;
+  display: grid;
+  gap: 16px;
+}
+.title {
+  font-family: var(--f-display);
+  font-size: 26px;
+  margin: 0;
+}
+.muted {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+.btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}

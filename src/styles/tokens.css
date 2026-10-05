@@ -71,3 +71,9 @@ input {
   font: inherit;
   color: inherit;
 }
+/* Fenêtres widget et pluie : fond transparent, seule la carte est peinte. */
+html.transparent,
+html.transparent body {
+  background: transparent;
+  overflow: hidden;
+}

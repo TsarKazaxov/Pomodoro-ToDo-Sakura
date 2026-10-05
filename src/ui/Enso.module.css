@@ -1,0 +1,22 @@
+.enso {
+  display: block;
+  overflow: visible;
+}
+.ghost {
+  fill: var(--ink);
+  opacity: 0.09;
+}
+.ink {
+  fill: var(--ink);
+  transition: fill 0.3s var(--ease);
+}
+.sakura .ink,
+.bloom .ink {
+  fill: var(--sakura);
+}
+.bloom .ink {
+  transition-duration: 0.15s;
+}
+.reveal {
+  transition: stroke-dashoffset 1s linear;
+}

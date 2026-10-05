@@ -1,125 +1,278 @@
-// Source de vérité de l'interface. En Phase 3, la fenêtre widget et la fenêtre principale
-// partageront cet état via les événements Tauri ; pour l'instant, une seule fenêtre.
+// État de l'interface, partagé entre les fenêtres (D-026).
+//
+// - Le widget est la fenêtre **propriétaire** : il lit et écrit le fichier, fait avancer le
+//   minuteur, calcule les récompenses et diffuse l'état à chaque changement.
+// - La fenêtre principale est **cliente** : elle envoie ses actions et reçoit l'état.
+// Un seul écrivain du fichier : aucune course entre fenêtres.
 
 import { create } from "zustand";
-import { applyTransition } from "../core/apply";
+import { emptyCombo, stepCombo, type ComboState } from "../core/combo";
 import { createEmptyData } from "../core/schema";
-import { addTask, parseQuickAdd, setStatus } from "../core/tasks";
-import * as timer from "../core/timer";
-import type { DataFile, TaskStatus } from "../core/types";
+import type { DataFile } from "../core/types";
 import type { DataStore, LoadResult } from "../storage/dataStore";
+import { reduce, type Action, type Effect } from "./actions";
 
 export type Status = Exclude<LoadResult["kind"], "ok"> | "loading" | "ready" | "error";
 
-interface State {
+export interface Snapshot {
   status: Status;
   detail: string;
   backups: string[];
   data: DataFile | null;
-  now: number;
-  init(store: DataStore, deviceId: string): Promise<void>;
-  restore(name: string): Promise<void>;
-  tick(now?: number): void;
-  toggle(): void;
-  skip(): void;
-  reset(): void;
-  quickAdd(raw: string, priority: boolean): boolean;
-  setTaskStatus(id: string, status: TaskStatus): void;
 }
 
-let disk: DataStore | null = null;
-let saveTimer: ReturnType<typeof setTimeout> | undefined;
+export type Reward =
+  | { kind: "task"; tier: number; points: number; origin: string }
+  | { kind: "focus"; breakMinutes: number; taskTitle?: string };
+
+/** Messages entre fenêtres. En production : événements Tauri (src/state/tauriTransport.ts). */
+export interface Transport {
+  /** Client → propriétaire. */
+  sendAction(msg: ClientMessage): void;
+  onAction(cb: (msg: ClientMessage) => void): void;
+  /** Propriétaire → clients. */
+  broadcastState(s: Snapshot): void;
+  onState(cb: (s: Snapshot) => void): void;
+  broadcastReward(r: Reward): void;
+  onReward(cb: (r: Reward) => void): void;
+  /** Un client qui s'ouvre demande l'état courant. */
+  requestState(): void;
+  onRequestState(cb: () => void): void;
+}
+
+export type ClientMessage =
+  { kind: "action"; action: Action; origin: string } | { kind: "restore"; name: string };
+
+/** Effets de bord du propriétaire : son, pluie de pétales plein écran. */
+export interface OwnerHooks {
+  playChime?(strikes: number, gain: number): void;
+  /** Pluie hors de la fenêtre d'origine, paliers 3 et plus (D-027). */
+  screenRain?(tier: number, origin: string): void;
+}
+
+interface State extends Snapshot {
+  role: "owner" | "client" | null;
+  combo: ComboState;
+  dispatch(action: Action): void;
+  restore(name: string): void;
+}
+
 const SAVE_DELAY_MS = 300;
+const EXTERNAL_CHECK_MS = 5_000;
 
-export const useSakura = create<State>((set, get) => {
-  /** Remplace les données et planifie l'écriture (regroupée : 300 ms). */
-  const commit = (data: DataFile) => {
-    set({ data });
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => void persist(), SAVE_DELAY_MS);
-  };
+type Ctx = {
+  transport: Transport;
+  label: string;
+  disk?: DataStore;
+  hooks: OwnerHooks;
+  now: () => number;
+  saveTimer?: ReturnType<typeof setTimeout>;
+  saving: boolean;
+};
+let ctx: Ctx | null = null;
+const rewardListeners = new Set<(r: Reward) => void>();
 
-  const persist = async () => {
-    const data = get().data;
-    if (!disk || !data) return;
-    try {
-      const r = await disk.save(data);
-      // D-014 : un autre Mac a écrit entre-temps ; sa version gagne, on la relit.
-      if (r.kind === "stale") await load();
-    } catch (e) {
-      set({ status: "error", detail: String(e) });
+/** Récompenses vues par cette fenêtre (pétales). Renvoie la fonction de désabonnement. */
+export function onReward(cb: (r: Reward) => void): () => void {
+  rewardListeners.add(cb);
+  return () => rewardListeners.delete(cb);
+}
+const emitReward = (r: Reward) => rewardListeners.forEach((cb) => cb(r));
+
+export const useSakura = create<State>((_set, get) => ({
+  role: null,
+  status: "loading",
+  detail: "",
+  backups: [],
+  data: null,
+  combo: emptyCombo(),
+
+  dispatch(action) {
+    if (!ctx) return;
+    if (get().role === "client") {
+      ctx.transport.sendAction({ kind: "action", action, origin: ctx.label });
+      return;
     }
+    applyOwner(action, ctx.label);
+  },
+
+  restore(name) {
+    if (!ctx) return;
+    if (get().role === "client") ctx.transport.sendAction({ kind: "restore", name });
+    else void restoreOwner(name);
+  },
+}));
+
+// ---------- propriétaire ----------
+
+function snapshot(): Snapshot {
+  const { status, detail, backups, data } = useSakura.getState();
+  return { status, detail, backups, data };
+}
+
+function broadcast() {
+  ctx?.transport.broadcastState(snapshot());
+}
+
+function applyLoad(r: LoadResult) {
+  if (r.kind === "ok")
+    useSakura.setState({ status: "ready", data: r.data, detail: "", backups: [] });
+  else if (r.kind === "corrupt")
+    useSakura.setState({ status: "corrupt", detail: r.detail, backups: r.backups, data: null });
+  else if (r.kind === "too_new")
+    useSakura.setState({ status: "too_new", detail: r.detail, data: null });
+  else useSakura.setState({ status: r.kind, data: null });
+  broadcast();
+}
+
+async function persist() {
+  if (!ctx?.disk) return;
+  const data = useSakura.getState().data;
+  if (!data) return;
+  ctx.saving = true;
+  try {
+    const r = await ctx.disk.save(data);
+    // D-014 : un autre Mac a écrit entre-temps ; sa version gagne.
+    if (r.kind === "stale") applyLoad(await ctx.disk.load());
+  } catch (e) {
+    useSakura.setState({ status: "error", detail: String(e) });
+    broadcast();
+  } finally {
+    ctx.saving = false;
+  }
+}
+
+function schedulePersist() {
+  if (!ctx) return;
+  clearTimeout(ctx.saveTimer);
+  ctx.saveTimer = setTimeout(() => {
+    ctx!.saveTimer = undefined;
+    void persist();
+  }, SAVE_DELAY_MS);
+}
+
+function handleEffects(effects: Effect[], origin: string, data: DataFile) {
+  if (!ctx) return;
+  for (const e of effects) {
+    let reward: Reward | null = null;
+    if (e.kind === "taskDone") {
+      const r = stepCombo(useSakura.getState().combo, e.taskId, ctx.now());
+      useSakura.setState({ combo: r.state });
+      reward = { kind: "task", tier: r.tier, points: e.points, origin };
+      if (data.settings.soundEnabled)
+        ctx.hooks.playChime?.(r.tier, (0.55 + r.tier * 0.1) * data.settings.soundVolume);
+      if (r.tier >= 3) ctx.hooks.screenRain?.(r.tier, origin);
+    } else if (e.kind === "focusDone") {
+      const title = e.taskId ? data.tasks.find((t) => t.id === e.taskId)?.title : undefined;
+      reward = title
+        ? { kind: "focus", breakMinutes: e.breakMinutes, taskTitle: title }
+        : { kind: "focus", breakMinutes: e.breakMinutes };
+      if (data.settings.soundEnabled) ctx.hooks.playChime?.(2, data.settings.soundVolume);
+    } else if (e.kind === "breakDone") {
+      if (data.settings.soundEnabled) ctx.hooks.playChime?.(1, 0.5 * data.settings.soundVolume);
+    }
+    if (reward) {
+      emitReward(reward);
+      ctx.transport.broadcastReward(reward);
+    }
+  }
+}
+
+function applyOwner(action: Action, origin: string) {
+  if (!ctx) return;
+  const { data, status } = useSakura.getState();
+  if (!data || status !== "ready") return;
+  const r = reduce(data, action, ctx.now());
+  if (r.data === data && r.effects.length === 0) return;
+  useSakura.setState({ data: r.data });
+  broadcast();
+  schedulePersist();
+  handleEffects(r.effects, origin, r.data);
+}
+
+async function restoreOwner(name: string) {
+  if (ctx?.disk) applyLoad(await ctx.disk.restoreBackup(name));
+}
+
+/** Relit le fichier s'il a été modifié ailleurs (autre Mac via iCloud) et rien n'est en attente. */
+export async function checkExternalChange(): Promise<boolean> {
+  if (!ctx?.disk || ctx.saveTimer || ctx.saving) return false;
+  if (!(await ctx.disk.hasExternalChange())) return false;
+  applyLoad(await ctx.disk.load());
+  return true;
+}
+
+export async function initOwner(opts: {
+  transport: Transport;
+  label: string;
+  disk: DataStore;
+  deviceId: string;
+  hooks?: OwnerHooks;
+  now?: () => number;
+}): Promise<() => void> {
+  ctx = {
+    transport: opts.transport,
+    label: opts.label,
+    disk: opts.disk,
+    hooks: opts.hooks ?? {},
+    now: opts.now ?? Date.now,
+    saving: false,
   };
-
-  const applyLoad = (r: LoadResult) => {
-    if (r.kind === "ok") set({ status: "ready", data: r.data, detail: "", backups: [] });
-    else if (r.kind === "corrupt") set({ status: "corrupt", detail: r.detail, backups: r.backups });
-    else if (r.kind === "too_new") set({ status: "too_new", detail: r.detail });
-    else set({ status: r.kind });
+  useSakura.setState({ role: "owner" });
+  const t = opts.transport;
+  t.onAction((msg) => {
+    if (msg.kind === "action") applyOwner(msg.action, msg.origin);
+    else void restoreOwner(msg.name);
+  });
+  t.onRequestState(broadcast);
+  try {
+    const r = await opts.disk.load();
+    if (r.kind === "missing") {
+      const data = createEmptyData(opts.deviceId, ctx.now());
+      await opts.disk.save(data);
+      applyLoad({ kind: "ok", data });
+    } else applyLoad(r);
+  } catch (e) {
+    useSakura.setState({ status: "error", detail: String(e) });
+    broadcast();
+  }
+  const tick = setInterval(() => applyOwner({ type: "timer/tick" }, opts.label), 1000);
+  const ext = setInterval(() => void checkExternalChange(), EXTERNAL_CHECK_MS);
+  return () => {
+    clearInterval(tick);
+    clearInterval(ext);
   };
+}
 
-  const load = async () => applyLoad(await disk!.load());
+/** Vide l'écriture en attente (fermeture de l'app). */
+export async function flush() {
+  if (ctx?.saveTimer) {
+    clearTimeout(ctx.saveTimer);
+    ctx.saveTimer = undefined;
+    await persist();
+  }
+}
 
-  return {
+// ---------- client ----------
+
+export function initClient(opts: { transport: Transport; label: string }) {
+  ctx = { transport: opts.transport, label: opts.label, hooks: {}, now: Date.now, saving: false };
+  useSakura.setState({ role: "client" });
+  opts.transport.onState((s) => useSakura.setState(s));
+  opts.transport.onReward(emitReward);
+  opts.transport.requestState();
+}
+
+/** Tests uniquement. */
+export function __resetStore() {
+  ctx = null;
+  rewardListeners.clear();
+  useSakura.setState({
+    role: null,
     status: "loading",
     detail: "",
     backups: [],
     data: null,
-    now: Date.now(),
-
-    async init(store, deviceId) {
-      disk = store;
-      try {
-        const r = await store.load();
-        if (r.kind === "missing") {
-          const data = createEmptyData(deviceId, Date.now());
-          await store.save(data);
-          set({ status: "ready", data });
-        } else applyLoad(r);
-      } catch (e) {
-        set({ status: "error", detail: String(e) });
-      }
-    },
-
-    async restore(name) {
-      if (disk) applyLoad(await disk.restoreBackup(name));
-    },
-
-    tick(now = Date.now()) {
-      set({ now });
-      const data = get().data;
-      if (!data) return;
-      const next = applyTransition(
-        data,
-        timer.advance(data.timer, timer.durationsFrom(data.settings), now),
-      );
-      if (next !== data) commit(next);
-    },
-
-    toggle() {
-      const data = get().data;
-      if (data) commit({ ...data, timer: timer.toggle(data.timer, Date.now()) });
-    },
-    skip() {
-      const data = get().data;
-      if (data) commit(applyTransition(data, timer.skip(data.timer, Date.now())));
-    },
-    reset() {
-      const data = get().data;
-      if (data) commit(applyTransition(data, timer.reset(data.timer, Date.now())));
-    },
-
-    quickAdd(raw, priority) {
-      const data = get().data;
-      const parsed = parseQuickAdd(raw);
-      if (!data || !parsed) return false;
-      commit({ ...data, tasks: addTask(data.tasks, { ...parsed, priority }, Date.now()) });
-      return true;
-    },
-
-    setTaskStatus(id, status) {
-      const data = get().data;
-      if (data) commit({ ...data, tasks: setStatus(data.tasks, id, status, Date.now()) });
-    },
-  };
-});
+    combo: emptyCombo(),
+  });
+}

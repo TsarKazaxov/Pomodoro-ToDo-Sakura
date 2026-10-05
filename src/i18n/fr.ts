@@ -1,0 +1,41 @@
+// Chaînes de l'interface (D-004). Vocabulaire : « Pause » = pause Pomodoro, « Suspendu » =
+// minuteur arrêté par l'utilisateur (D-018).
+
+export const fr = {
+  phase: { idle: "Arrêté", paused: "Suspendu", focus: "Focus", break: "Pause" },
+  phaseLong: { focus: "Focus", short_break: "Pause courte", long_break: "Pause longue" },
+  start: "Démarrer",
+  resume: "Reprendre",
+  suspend: "Suspendre",
+  skip: "Passer",
+  reset: "Réinitialiser",
+  currentTask: "Tâche en cours",
+  freeFocus: "Aucune tâche (focus libre)",
+  freeFocusHint:
+    "Les pomodoros d'un focus libre comptent dans ta journée, pas dans la calibration.",
+  pickTask: "Choisis une tâche, ou lance un focus libre",
+  freeFocusRunning: "Focus libre",
+  splitHint: "Tâche XL : découpe-la en tâches plus petites.",
+  priorities: "Priorités du jour",
+  pinned: (n: number) => `${n} épinglée${n > 1 ? "s" : ""}`,
+  more: (n: number) => `+ ${n} dans la vue complète`,
+  noPriority: "Rien d'épinglé pour aujourd'hui. Écris ta tâche ci-dessous, par exemple",
+  quickAddPlaceholder: "Ajouter : Relire la spec #S",
+  quickAddExample: "Relire la spec #S",
+  todayPoints: "points aujourd'hui",
+  open: "Ouvrir Sakura",
+  combo: (n: number) => `Série ×${n}`,
+  nextFocus: (n: number, of: number) => `Prochain : focus ${n} sur ${of}`,
+  focusOf: (n: number, of: number) => `Focus ${n} sur ${of}`,
+  breakLine: (label: string, min: number) => `${label} · ${min} min`,
+  complete: (title: string) => `Terminer ${title}`,
+  status: {
+    loading: "Chargement…",
+    icloud_pending: "Téléchargement de tes données depuis iCloud Drive…",
+    corrupt: "Impossible de lire tes données",
+    too_new: "Fichier créé par une version plus récente de Sakura",
+    error: "Erreur d'accès aux données",
+    missing: "Création du fichier…",
+  },
+  openFull: "Ouvre la vue complète pour choisir quoi faire.",
+} as const;

@@ -1,0 +1,35 @@
+.sakura-petal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 14px;
+  height: 13px;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  animation: sakura-fall var(--d) cubic-bezier(0.25, 0.6, 0.35, 1) var(--delay) forwards;
+}
+.sakura-petal svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.sakura-petal path {
+  fill: var(--sakura);
+}
+@keyframes sakura-fall {
+  0% {
+    opacity: 0;
+    transform: translate(var(--x0), var(--y0)) rotate(var(--r0)) scale(var(--s));
+  }
+  12% {
+    opacity: 0.95;
+  }
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x1), var(--y1)) rotate(var(--r1)) scale(var(--s));
+  }
+}
