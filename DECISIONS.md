@@ -108,3 +108,29 @@ _Conservé pour l'historique. Q4 a montré qu'il n'y a qu'un Mac aujourd'hui._
   - Placeholders `.icloud` gérés (D-006-old, garde-fou conservé).
   - `updatedAt` conservé (coût nul). `deletedAt` et la fusion par entité → `BACKLOG.md`.
 - **Impact sur « Terminé » V1** : le critère « synchro entre deux Mac » devient « survit à un changement de Mac via iCloud, en usage successif ».
+
+---
+
+## Phase 1 — Prototype
+
+### D-015 · Contraste AA : deux tokens clairs ajustés
+Mesures sur `--paper` (WCAG, texte < 18 px) :
+
+| Token | Brief | Ratio | Corrigé | Ratio |
+|---|---|---|---|---|
+| `--ink-muted` clair | `#7A7068` | 4,26 ✗ | `#716860` | 4,80 ✓ |
+| `--shu` clair | `#C8432F` | 4,30 ✗ | `#BD3F2C` | 4,73 ✓ |
+
+Le reste passe : `--ink` 13,2 (clair) / 14,0 (sombre), `--ink-muted` sombre 5,6, `--shu` sombre 4,9. `--sakura` clair (1,8) ne porte jamais de texte : il sert de fond (texte `--ink` dessus : 7,2) ou de marque graphique.
+
+### D-016 · Enchaînement des phases
+- Fin d'un focus → la pause (courte ou longue) **démarre seule**.
+- Fin d'une pause → le minuteur attend : le focus suivant ne démarre qu'au clic. Personne ne veut repartir en focus sans être revenu à son bureau.
+- « Passer » termine la phase en cours comme **interrompue** (compte dans le taux d'interruption) et passe à la suivante.
+
+### D-017 · Ajout rapide
+- Syntaxe `Titre #M` (insensible à la casse). Sans `#taille` → **S**.
+- Une tâche ajoutée depuis le widget est épinglée en priorité (on l'ajoute dans la liste « Priorités du jour »). Depuis l'onglet Tâches, elle ne l'est pas.
+
+### D-018 · Vocabulaire
+- **Pause** = la pause du Pomodoro (courte/longue). **Suspendu** = le minuteur arrêté par l'utilisateur. Les deux mots ne doivent jamais se croiser à l'écran.

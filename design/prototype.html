@@ -1,0 +1,1174 @@
+<title>Prototype Sakura</title>
+<meta name="description" content="Prototype interactif de Sakura : widget flottant, vue complète, premier lancement et états limites.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout : une colonne de démonstration ; un bureau macOS simulé porte le widget, puis la vue complète dans un cadre de fenêtre. */
+:root {
+  --paper: #F5F0E6;
+  --ink: #2B2622;
+  --ink-muted: #716860;          /* D-015 : #7A7068 → AA */
+  --sakura: #E8A0B0;
+  --shu: #BD3F2C;                /* D-015 : #C8432F → AA */
+  --m0: #E6E0D3; --m1: #C9D8A8; --m2: #9DBB6E; --m3: #6E9A45; --m4: #46702A;
+  --surface: #FBF8F2;
+  --surface-2: #EFE8DB;
+  --line: #E0D7C7;
+  --desk: #D9D0BF;
+  --desk-2: #CFC5B2;
+  --win: #FBF8F2;
+  --shadow: 0 1px 2px rgba(43,38,34,.08), 0 12px 32px rgba(43,38,34,.16);
+  --f-display: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --f-ui: "Zen Kaku Gothic New", "Hiragino Sans", -apple-system, system-ui, sans-serif;
+  --ease: cubic-bezier(.2,.7,.2,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1C1A17; --ink: #EDE6DA; --ink-muted: #9A9088; --sakura: #D88A9C; --shu: #E0604A;
+    --m0: #2A2723; --m1: #33452A; --m2: #4A6A35; --m3: #6A9448; --m4: #94C266;
+    --surface: #25221E; --surface-2: #2E2A25; --line: #3A352F; --desk: #121110; --desk-2: #0C0B0A; --win: #211F1B;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 36px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #1C1A17; --ink: #EDE6DA; --ink-muted: #9A9088; --sakura: #D88A9C; --shu: #E0604A;
+  --m0: #2A2723; --m1: #33452A; --m2: #4A6A35; --m3: #6A9448; --m4: #94C266;
+  --surface: #25221E; --surface-2: #2E2A25; --line: #3A352F; --desk: #121110; --desk-2: #0C0B0A; --win: #211F1B;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 14px 36px rgba(0,0,0,.5);
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { background: var(--paper); color: var(--ink); }
+body { font-family: var(--f-ui); font-size: 14px; line-height: 1.5; padding-inline: 16px; padding-block: 0 64px; -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--sakura); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; margin: 0; }
+.wrap { max-width: 1040px; margin-inline: auto; }
+.mono { font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-muted); }
+.eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); font-weight: 500; }
+
+/* ---------- barre du prototype ---------- */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--paper); border-bottom: 1px solid var(--line); margin-inline: -16px; padding: 10px 16px; }
+.top .wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand .enso { width: 28px; height: 28px; }
+.brand h1 { font-size: 20px; }
+.brand span { font-size: 12px; }
+.ctrl { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-muted); }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 8px; padding: 2px; }
+.seg button { border: 0; background: transparent; padding: 3px 9px; border-radius: 6px; font-size: 12px; color: var(--ink-muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.check input { accent-color: var(--ink); }
+
+section.block { padding-block: 40px 8px; }
+.block-head { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 24px; margin-bottom: 16px; }
+.block-head h2 { font-size: 26px; }
+.block-head p { margin: 4px 0 0; max-width: 62ch; color: var(--ink-muted); }
+.block-head .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 12px; font-size: 13px; transition: background .2s var(--ease), border-color .2s var(--ease); }
+.btn:hover { border-color: var(--ink-muted); }
+.btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 3px 9px; font-size: 12px; }
+
+/* ---------- bureau simulé ---------- */
+.desk { position: relative; height: 620px; border-radius: 14px; overflow: hidden; background:
+  radial-gradient(120% 90% at 20% 10%, var(--desk) 0%, var(--desk-2) 100%); border: 1px solid var(--line); }
+.menubar { position: absolute; inset: 0 0 auto 0; height: 26px; display: flex; align-items: center; gap: 16px; padding: 0 12px; font-size: 12px; background: color-mix(in oklab, var(--surface) 70%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.menubar b { font-weight: 700; }
+.menubar .tray { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.tray-item { display: inline-flex; align-items: center; gap: 5px; padding: 1px 6px; border-radius: 4px; }
+.tray-item .enso { width: 14px; height: 14px; }
+.fakewin { position: absolute; background: var(--win); border-radius: 10px; box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; }
+.fakewin .tb { height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 11px; color: var(--ink-muted); border-bottom: 1px solid var(--line); }
+.lights { display: inline-flex; gap: 6px; margin-right: 8px; }
+.lights i { width: 10px; height: 10px; border-radius: 50%; background: #FF5F57; }
+.lights i:nth-child(2) { background: #FEBC2E; } .lights i:nth-child(3) { background: #28C840; }
+.fakewin .body { padding: 14px; display: grid; gap: 8px; }
+.fakewin .bar { height: 8px; border-radius: 4px; background: var(--surface-2); }
+.desk-label { position: absolute; left: 14px; bottom: 12px; font-size: 11px; color: var(--ink-muted); }
+
+/* ---------- widget ---------- */
+.widget { position: absolute; width: 240px; height: 64px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; z-index: 5;
+  transition: width .26s var(--ease), height .26s var(--ease), background-color .3s var(--ease); }
+.widget.c-tr { top: 38px; right: 12px; } .widget.c-tl { top: 38px; left: 12px; }
+.widget.c-br { bottom: 12px; right: 12px; } .widget.c-bl { bottom: 12px; left: 12px; }
+.widget.open { width: 360px; height: 520px; }
+.is-break .widget, .widget.is-break { background: color-mix(in oklab, var(--surface) 80%, var(--sakura)); }
+.w-compact, .w-exp { position: absolute; top: 0; transition: opacity .2s var(--ease); }
+.c-tr .w-compact, .c-br .w-compact, .c-tr .w-exp, .c-br .w-exp { right: 0; }
+.c-tl .w-compact, .c-bl .w-compact, .c-tl .w-exp, .c-bl .w-exp { left: 0; }
+.w-compact { width: 240px; height: 64px; display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; padding: 0 12px 0 10px; }
+.w-compact .enso { width: 44px; height: 44px; }
+.w-compact .t { font-family: var(--f-display); font-size: 21px; line-height: 1.1; font-variant-numeric: tabular-nums; font-weight: 700; }
+.w-compact .task { font-size: 11px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-compact > div { min-width: 0; }
+.widget.open .w-compact { opacity: 0; pointer-events: none; }
+.w-exp { width: 360px; height: 520px; padding: 14px 16px; display: grid; grid-template-rows: auto auto 1fr auto auto; gap: 10px; opacity: 0; pointer-events: none; }
+.widget.open .w-exp { opacity: 1; pointer-events: auto; transition-delay: .08s; }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 8px 2px 6px; border-radius: 99px; background: var(--surface-2); color: var(--ink-muted); white-space: nowrap; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ink-muted); }
+.pill.focus { color: var(--ink); } .pill.focus::before { background: var(--ink); }
+.pill.break { background: color-mix(in oklab, var(--sakura) 35%, var(--surface)); color: var(--ink); } .pill.break::before { background: var(--sakura); }
+.pill.done::before { background: var(--shu); }
+.pending-dot { position: absolute; top: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--sakura); box-shadow: 0 0 0 3px color-mix(in oklab, var(--sakura) 30%, transparent); }
+.c-tr .pending-dot, .c-br .pending-dot { left: 8px; } .c-tl .pending-dot, .c-bl .pending-dot { right: 8px; }
+
+.w-timer { display: grid; grid-template-columns: 124px 1fr; gap: 14px; align-items: center; }
+.enso-box { position: relative; width: 124px; height: 124px; }
+.enso-box .enso { position: absolute; inset: 0; width: 100%; height: 100%; }
+.enso-box .t { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font-family: var(--f-display); font-size: 27px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.w-side { display: grid; gap: 8px; justify-items: start; }
+.w-phase { font-size: 12px; color: var(--ink-muted); }
+.w-ctrls { display: flex; flex-wrap: wrap; gap: 6px; }
+.w-ctrls .btn { padding: 5px 10px; }
+.w-section-title { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.w-section-title h3 { font-family: var(--f-ui); font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); }
+.w-current select { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 8px; font-size: 13px; }
+.dots { display: flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 11px; color: var(--ink-muted); flex-wrap: wrap; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ink-muted); }
+.dots i.on { background: var(--ink); border-color: var(--ink); }
+.dots i.over { background: var(--shu); border-color: var(--shu); }
+.dots span { margin-left: 4px; }
+.hint { font-size: 11px; color: var(--shu); margin: 4px 0 0; }
+.prio { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.prio li { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: 8px; min-height: 26px; font-size: 13px; }
+.prio li .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prio .more { font-size: 11px; color: var(--ink-muted); display: block; }
+.tick { appearance: none; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--ink-muted); margin: 0; cursor: pointer; display: grid; place-content: center; transition: background .2s var(--ease), border-color .2s var(--ease); }
+.tick:checked { background: var(--m3); border-color: var(--m3); }
+.tick:checked::after { content: ""; width: 6px; height: 3px; border-left: 1.5px solid var(--paper); border-bottom: 1.5px solid var(--paper); transform: rotate(-45deg) translate(1px,-1px); }
+.size { display: inline-grid; place-content: center; min-width: 26px; height: 18px; padding: 0 5px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: .04em; background: var(--surface-2); color: var(--ink-muted); border: 0; }
+.size.XL { color: var(--shu); }
+.quick { width: 100%; border: 1px dashed var(--line); background: transparent; border-radius: 8px; padding: 6px 8px; font-size: 13px; margin-top: 6px; }
+.quick:focus { border-style: solid; border-color: var(--ink-muted); outline: none; }
+.empty { font-size: 12px; color: var(--ink-muted); margin: 2px 0; }
+.empty code { font-family: inherit; background: var(--surface-2); padding: 0 4px; border-radius: 4px; color: var(--ink); }
+.w-heat { display: flex; align-items: end; gap: 16px; }
+.today-pts { display: grid; gap: 0; }
+.today-pts b { font-family: var(--f-display); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.today-pts span { font-size: 11px; color: var(--ink-muted); }
+.w-open { justify-self: start; font-size: 13px; color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--sakura); padding-bottom: 1px; background: none; border-top: 0; border-left: 0; border-right: 0; }
+
+/* ---------- ensō ---------- */
+.enso { display: block; overflow: visible; }
+.enso .ghost { fill: var(--ink); opacity: .09; }
+.enso .ink { fill: var(--ink); transition: fill .3s var(--ease); }
+.is-break .enso .ink, .enso.break .ink { fill: var(--sakura); }
+.enso .reveal { transition: stroke-dashoffset 1s linear; }
+.rm .enso .reveal, .enso.instant .reveal { transition: none; }
+@media (prefers-reduced-motion: reduce) { .enso .reveal { transition: none; } }
+
+/* ---------- heatmap ---------- */
+.heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, var(--c)); grid-auto-columns: var(--c); gap: var(--g); }
+.heat i { width: var(--c); height: var(--c); border-radius: 2px; background: var(--m0); position: relative; }
+.heat i.l1 { background: var(--m1); } .heat i.l2 { background: var(--m2); } .heat i.l3 { background: var(--m3); } .heat i.l4 { background: var(--m4); }
+.heat i.future { background: transparent; }
+.heat i.dot::after { content: ""; position: absolute; inset: 0; margin: auto; width: 3px; height: 3px; border-radius: 50%; background: var(--ink-muted); }
+.heat i.today { outline: 1.5px solid var(--ink); outline-offset: 1px; }
+.heat.mini { --c: 8px; --g: 2px; }
+.heat.big { --c: 13px; --g: 3px; }
+.heat.big i { border-radius: 3px; cursor: default; }
+.heat-frame { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; width: max-content; }
+.heat-months { grid-column: 2; position: relative; height: 14px; font-size: 10px; color: var(--ink-muted); }
+.heat-months span { position: absolute; top: 0; }
+.heat-days { display: grid; grid-template-rows: repeat(7, 13px); gap: 3px; font-size: 10px; color: var(--ink-muted); }
+.legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-muted); }
+.legend i { width: 11px; height: 11px; border-radius: 2px; }
+.tip { position: fixed; z-index: 60; pointer-events: none; background: var(--ink); color: var(--paper); font-size: 12px; padding: 8px 10px; border-radius: 8px; max-width: 240px; box-shadow: var(--shadow); opacity: 0; transition: opacity .12s var(--ease); }
+.tip.on { opacity: 1; }
+.tip b { font-weight: 700; }
+.tip ul { margin: 4px 0 0; padding-left: 14px; }
+
+/* ---------- fenêtre complète ---------- */
+.window { background: var(--win); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; max-width: 960px; }
+.window .tb { height: 38px; display: flex; align-items: center; padding: 0 14px; border-bottom: 1px solid var(--line); position: relative; }
+.window .tb .ttl { position: absolute; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--ink-muted); pointer-events: none; }
+.tabs { display: flex; gap: 4px; padding: 10px 20px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { border: 0; background: none; padding: 8px 12px 10px; font-size: 14px; color: var(--ink-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 500; }
+.panel { padding: 20px; min-height: 560px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 14px; }
+.toolbar .add { flex: 1 1 260px; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: transparent; border-radius: 99px; padding: 2px 10px; font-size: 12px; color: var(--ink-muted); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.tasklist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.tasklist li { display: grid; grid-template-columns: 16px 20px minmax(0,1fr) auto auto auto auto; gap: 10px; align-items: center; padding: 7px 4px; border-bottom: 1px solid var(--line); font-size: 13px; background: var(--win); transition: background .2s var(--ease); }
+.tasklist li.dragging { opacity: .4; }
+.tasklist li.over { box-shadow: inset 0 2px 0 var(--sakura); }
+.tasklist li.is-done .title-in { color: var(--ink-muted); text-decoration: line-through; text-decoration-color: var(--ink-muted); }
+.tasklist li.is-dropped .title-in { color: var(--ink-muted); font-style: italic; }
+.grip { cursor: grab; color: var(--ink-muted); font-size: 12px; line-height: 1; user-select: none; letter-spacing: -2px; }
+.title-in { border: 0; background: transparent; padding: 3px 4px; border-radius: 4px; width: 100%; min-width: 0; text-overflow: ellipsis; }
+.title-in:hover { background: var(--surface-2); }
+.title-in:focus { background: var(--surface); outline: 1px solid var(--line); }
+.size-sel { appearance: none; border: 0; background: var(--surface-2); border-radius: 5px; font-size: 10px; font-weight: 700; padding: 2px 6px; color: var(--ink-muted); text-align: center; }
+.pom { font-size: 12px; color: var(--ink-muted); font-variant-numeric: tabular-nums; min-width: 38px; text-align: right; }
+.pom.over { color: var(--shu); }
+.pin { border: 0; background: none; padding: 2px; color: var(--line); display: grid; }
+.pin[aria-pressed="true"] { color: var(--shu); }
+.pin svg { width: 16px; height: 16px; }
+.status-sel { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; font-size: 12px; padding: 2px 4px; }
+.list-foot { margin-top: 10px; font-size: 12px; color: var(--ink-muted); }
+
+.act-grid { display: grid; gap: 28px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.stat { border-left: 2px solid var(--line); padding: 2px 0 2px 12px; }
+.stat b { display: block; font-family: var(--f-display); font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--ink-muted); }
+.card-title { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.card-title h3 { font-size: 17px; }
+.scroll-x { overflow-x: auto; padding-bottom: 4px; }
+.calib { display: grid; gap: 2px; }
+.calib-row { display: grid; grid-template-columns: 34px minmax(120px, 1.1fr) minmax(160px, 2fr) minmax(150px, 1.4fr); gap: 14px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.calib-row .nums { font-variant-numeric: tabular-nums; color: var(--ink-muted); font-size: 12px; }
+.scale { position: relative; height: 22px; }
+.scale .axis { position: absolute; left: 0; right: 0; top: 10px; height: 2px; background: var(--line); border-radius: 1px; }
+.scale .band { position: absolute; top: 6px; height: 10px; background: color-mix(in oklab, var(--m2) 45%, transparent); border-radius: 3px; }
+.scale .one { position: absolute; top: 3px; width: 1px; height: 16px; background: var(--ink-muted); }
+.scale .mark { position: absolute; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ink); border: 2px solid var(--win); }
+.verdict { font-size: 13px; }
+.verdict.ok { color: var(--ink); } .verdict.warn { color: var(--shu); }
+.scale-labels { display: grid; grid-template-columns: 34px minmax(120px, 1.1fr) minmax(160px, 2fr) minmax(150px, 1.4fr); gap: 14px; font-size: 10px; color: var(--ink-muted); }
+.scale-labels div:nth-child(3) { display: flex; justify-content: space-between; }
+.bars svg { width: 100%; height: auto; display: block; }
+.bars rect.b { fill: var(--m3); }
+.bars rect.b.today { fill: var(--m4); }
+.bars rect.hit { fill: transparent; }
+.bars text { fill: var(--ink-muted); font-size: 9px; font-family: var(--f-ui); }
+.bars line { stroke: var(--line); }
+
+.settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px 40px; }
+.fieldset { display: grid; gap: 10px; align-content: start; }
+.fieldset h3 { font-size: 16px; margin-bottom: 2px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.row input[type="number"] { width: 64px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 3px 6px; text-align: right; font-variant-numeric: tabular-nums; }
+.row input[type="range"] { accent-color: var(--ink); width: 140px; }
+.scale-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.scale-table th { text-align: left; font-weight: 500; font-size: 11px; color: var(--ink-muted); padding: 4px 0; }
+.scale-table td { padding: 3px 0; border-top: 1px solid var(--line); }
+.scale-table input { width: 56px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 2px 6px; text-align: right; font-variant-numeric: tabular-nums; }
+.switch { appearance: none; width: 32px; height: 18px; border-radius: 99px; background: var(--line); position: relative; cursor: pointer; transition: background .2s var(--ease); margin: 0; flex: none; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .2s var(--ease); }
+.switch:checked { background: var(--m3); }
+.switch:checked::after { transform: translateX(14px); }
+.path { font-size: 12px; background: var(--surface-2); border-radius: 6px; padding: 6px 8px; word-break: break-all; color: var(--ink-muted); }
+.corner-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 92px; height: 60px; padding: 4px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); }
+.corner-pick button { border: 0; border-radius: 3px; background: transparent; display: grid; padding: 3px; }
+.corner-pick button::after { content: ""; width: 14px; height: 6px; border-radius: 2px; background: var(--line); }
+.corner-pick button[data-c="tr"], .corner-pick button[data-c="br"] { justify-items: end; }
+.corner-pick button[data-c="bl"], .corner-pick button[data-c="br"] { align-items: end; }
+.corner-pick button[aria-pressed="true"]::after { background: var(--ink); }
+
+/* ---------- premier lancement ---------- */
+.onboard { max-width: 440px; background: var(--win); border-radius: 14px; box-shadow: var(--shadow); border: 1px solid var(--line); padding: 28px; display: grid; gap: 20px; }
+.onboard header { display: flex; gap: 14px; align-items: center; }
+.onboard header .enso { width: 52px; height: 52px; flex: none; }
+.onboard h3 { font-size: 22px; }
+.onboard p { margin: 2px 0 0; color: var(--ink-muted); font-size: 13px; }
+.ob-field { display: grid; gap: 6px; }
+.ob-field label, .ob-field .lbl { font-size: 13px; font-weight: 500; }
+.ob-field input[type="text"] { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; }
+.ob-field small { font-size: 11px; color: var(--ink-muted); }
+
+/* ---------- états ---------- */
+.states { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.state { display: grid; gap: 10px; align-content: start; }
+.state h3 { font-family: var(--f-ui); font-size: 13px; font-weight: 700; }
+.state > p { margin: 0; font-size: 12px; color: var(--ink-muted); }
+.stage { position: relative; background: var(--desk); border-radius: 12px; padding: 16px; min-height: 140px; display: grid; place-items: center; border: 1px solid var(--line); }
+.stage .widget { position: relative; inset: auto; }
+.panel-card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); border: 1px solid var(--line); padding: 14px; width: 100%; max-width: 300px; display: grid; gap: 8px; }
+.alert { border-left: 3px solid var(--shu); }
+.alert h4 { margin: 0; font-size: 14px; }
+.alert p { margin: 0; font-size: 12px; color: var(--ink-muted); }
+.alert .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.notif { position: absolute; z-index: 20; top: 36px; right: 12px; width: 300px; max-width: calc(100% - 24px); background: color-mix(in oklab, var(--surface) 88%, transparent); backdrop-filter: blur(16px); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 10px 12px; display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: 12px; transition: opacity .25s var(--ease), transform .25s var(--ease); }
+.notif[hidden] { display: none !important; }
+.notif .enso { width: 28px; height: 28px; }
+.notif b { display: block; font-size: 12px; }
+.stage .notif { position: relative; top: auto; right: auto; }
+.sync { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-muted); }
+.sync .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--ink-muted); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- pétales ---------- */
+.petal { position: fixed; left: 0; top: 0; width: 14px; height: 13px; z-index: 70; pointer-events: none; opacity: 0;
+  animation: fall var(--d) cubic-bezier(.25,.6,.35,1) var(--delay) forwards; }
+.petal svg { width: 100%; height: 100%; display: block; }
+.petal path { fill: var(--sakura); }
+@keyframes fall {
+  0% { opacity: 0; transform: translate(var(--x0), var(--y0)) rotate(var(--r0)); }
+  12% { opacity: .95; }
+  70% { opacity: .9; }
+  100% { opacity: 0; transform: translate(var(--x1), var(--y1)) rotate(var(--r1)); }
+}
+.toast { position: fixed; z-index: 80; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 12px); background: var(--ink); color: var(--paper); font-size: 13px; padding: 8px 14px; border-radius: 99px; opacity: 0; transition: opacity .2s var(--ease), transform .2s var(--ease); pointer-events: none; max-width: calc(100% - 32px); }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+.notes { margin-top: 12px; font-size: 12px; color: var(--ink-muted); max-width: 70ch; }
+.notes li { margin-block: 2px; }
+footer.end { margin-top: 48px; font-size: 12px; color: var(--ink-muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+@media (max-width: 720px) {
+  .tasklist li { grid-template-columns: 16px 20px minmax(0,1fr) auto auto; }
+  .tasklist li .pom, .tasklist li .status-sel { display: none; }
+  .calib-row, .scale-labels { grid-template-columns: 34px 1fr; }
+  .calib-row .scale, .scale-labels div:nth-child(3), .scale-labels div:nth-child(4) { grid-column: 1 / -1; }
+  .calib-row .verdict { grid-column: 2; }
+  .scale-labels div:nth-child(2) { display: none; }
+}
+@media (max-width: 420px) {
+  .widget.open { width: calc(100% - 24px); }
+  .w-exp { width: 100%; }
+}
+</style>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brand"><svg class="enso" data-enso="7" data-progress="0.82" viewBox="0 0 100 100"></svg><div><h1>Sakura</h1><span class="muted">Prototype · données factices</span></div></div>
+    <div class="ctrl">Thème
+      <div class="seg" id="themeSeg" role="group" aria-label="Thème">
+        <button type="button" data-v="auto" aria-pressed="true">Auto</button><button type="button" data-v="light" aria-pressed="false">Clair</button><button type="button" data-v="dark" aria-pressed="false">Sombre</button>
+      </div>
+    </div>
+    <div class="ctrl">Vitesse
+      <div class="seg" id="speedSeg" role="group" aria-label="Vitesse de simulation">
+        <button type="button" data-v="1" aria-pressed="false">×1</button><button type="button" data-v="60" aria-pressed="true">×60</button><button type="button" data-v="600" aria-pressed="false">×600</button>
+      </div>
+    </div>
+    <label class="ctrl check"><input type="checkbox" id="rmToggle"> Mouvement réduit</label>
+  </div>
+</div>
+
+<main class="wrap">
+
+<!-- ===================== A + B : widget ===================== -->
+<section class="block" id="widget">
+  <div class="block-head">
+    <div>
+      <div class="eyebrow">États A et B</div>
+      <h2>Widget flottant</h2>
+      <p>Survole le widget pour le déployer (150 ms), sors pour le replier (600 ms, sauf si tu écris dans un champ). Sur écran tactile, touche-le. À ×60, un focus de 25 min dure 25 s.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" type="button" id="simEnd">Terminer le focus maintenant</button>
+      <button class="btn" type="button" id="simEndClosed">Fin de session, widget replié</button>
+    </div>
+  </div>
+  <div class="desk" id="desk">
+    <div class="menubar">
+      <b></b><span>Figma</span><span class="muted">Fichier</span><span class="muted">Édition</span><span class="muted">Affichage</span>
+      <div class="tray">
+        <span class="tray-item" title="Sakura dans la barre de menu"><svg class="enso" data-enso="3" data-progress="0" data-role="tray-enso" viewBox="0 0 100 100"></svg><span class="mono" data-bind="time">25:00</span></span>
+        <span class="muted mono" id="clock">lun. 14:02</span>
+      </div>
+    </div>
+    <div class="fakewin" style="left:4%; top:60px; width:62%; height:440px;">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span>Onboarding v3 — Figma</div>
+      <div class="body"><div class="bar" style="width:40%"></div><div class="bar" style="width:72%"></div><div class="bar" style="width:55%"></div><div class="bar" style="width:64%;height:180px;border-radius:8px"></div><div class="bar" style="width:30%"></div></div>
+    </div>
+    <div class="fakewin" style="left:30%; top:300px; width:40%; height:240px;">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span>Notes — Retours atelier</div>
+      <div class="body"><div class="bar" style="width:80%"></div><div class="bar" style="width:66%"></div><div class="bar" style="width:74%"></div><div class="bar" style="width:40%"></div></div>
+    </div>
+
+    <div class="notif" id="notif" hidden role="status">
+      <svg class="enso" data-enso="5" data-progress="1" viewBox="0 0 100 100"></svg>
+      <div><b>Sakura</b><span id="notifText">Focus terminé.</span></div>
+    </div>
+
+    <div class="widget c-tr" id="w" tabindex="0" aria-label="Widget Sakura">
+      <span class="pending-dot" id="pendingDot" hidden></span>
+      <div class="w-compact">
+        <svg class="enso" data-enso="11" data-role="timer-enso" viewBox="0 0 100 100"></svg>
+        <div><div class="t" data-bind="time">25:00</div><div class="task" data-bind="taskTitle">—</div></div>
+        <span class="pill" data-bind="pill">Arrêté</span>
+      </div>
+      <div class="w-exp">
+        <div class="w-timer">
+          <div class="enso-box"><svg class="enso" data-enso="11" data-role="timer-enso" viewBox="0 0 100 100"></svg><div class="t" data-bind="time">25:00</div></div>
+          <div class="w-side">
+            <span class="pill" data-bind="pill">Arrêté</span>
+            <div class="w-phase" data-bind="phaseLine">Focus 1 sur 4</div>
+            <div class="w-ctrls">
+              <button class="btn primary" type="button" data-act="toggle">Démarrer</button>
+              <button class="btn" type="button" data-act="skip">Passer</button>
+              <button class="btn ghost" type="button" data-act="reset">Réinitialiser</button>
+            </div>
+          </div>
+        </div>
+        <div class="w-current">
+          <div class="w-section-title"><h3>Tâche en cours</h3></div>
+          <select id="curTask" aria-label="Tâche en cours"></select>
+          <div class="dots" id="curDots"></div>
+          <p class="hint" id="curHint" hidden>Tâche XL : découpe-la en tâches plus petites.</p>
+        </div>
+        <div class="w-prio">
+          <div class="w-section-title"><h3>Priorités du jour</h3><span class="muted" style="font-size:11px" id="prioCount"></span></div>
+          <ul class="prio" id="prio"></ul>
+          <input class="quick" id="quickW" type="text" placeholder="Ajouter : Relire la spec #S" aria-label="Ajout rapide">
+        </div>
+        <div class="w-heat">
+          <div class="heat mini" id="miniHeat" role="img" aria-label="Activité des 12 dernières semaines"></div>
+          <div class="today-pts"><b data-bind="todayPts">0</b><span>points aujourd'hui</span></div>
+        </div>
+        <button class="w-open" type="button" id="openFull">Ouvrir Sakura</button>
+      </div>
+    </div>
+    <div class="desk-label">Bureau macOS simulé · le widget reste au-dessus des autres fenêtres, sur tous les bureaux.</div>
+  </div>
+</section>
+
+<!-- ===================== C : vue complète ===================== -->
+<section class="block" id="complete">
+  <div class="block-head">
+    <div>
+      <div class="eyebrow">État C</div>
+      <h2>Vue complète</h2>
+      <p>Fenêtre normale de 960 × 680. Tout ce que tu fais ici se répercute dans le widget au-dessus.</p>
+    </div>
+  </div>
+  <div class="window">
+    <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">Sakura</span></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" type="button" id="tab-tasks" aria-controls="p-tasks" aria-selected="true">Tâches</button>
+      <button role="tab" type="button" id="tab-act" aria-controls="p-act" aria-selected="false">Activité</button>
+      <button role="tab" type="button" id="tab-set" aria-controls="p-set" aria-selected="false">Réglages</button>
+    </div>
+
+    <div class="panel" id="p-tasks" role="tabpanel" aria-labelledby="tab-tasks">
+      <div class="toolbar">
+        <input class="add" id="quickF" type="text" placeholder="Nouvelle tâche, ex. : Audit du parcours de paiement #L" aria-label="Nouvelle tâche">
+        <div class="chips" id="fStatus" role="group" aria-label="Filtrer par statut"></div>
+        <div class="chips" id="fSize" role="group" aria-label="Filtrer par taille"></div>
+      </div>
+      <ul class="tasklist" id="tasklist"></ul>
+      <div class="list-foot" id="listFoot"></div>
+    </div>
+
+    <div class="panel" id="p-act" role="tabpanel" aria-labelledby="tab-act" hidden>
+      <div class="act-grid">
+        <div class="stats" id="stats"></div>
+        <div>
+          <div class="card-title"><h3>26 semaines</h3>
+            <div class="legend">Moins <i style="background:var(--m0)"></i><i style="background:var(--m1)"></i><i style="background:var(--m2)"></i><i style="background:var(--m3)"></i><i style="background:var(--m4)"></i> Plus <span style="margin-left:10px">· point = pomodoros sans tâche terminée</span></div>
+          </div>
+          <div class="scroll-x"><div class="heat-frame" id="bigHeat"></div></div>
+        </div>
+        <div>
+          <div class="card-title"><h3>Calibration</h3><span class="muted" style="font-size:12px">Pomodoros réels ÷ attendus, par taille. Visible à partir de 5 tâches terminées.</span></div>
+          <div class="calib" id="calib"></div>
+        </div>
+        <div>
+          <div class="card-title"><h3>Points par jour</h3><span class="muted" style="font-size:12px">30 derniers jours</span></div>
+          <div class="bars" id="bars"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="p-set" role="tabpanel" aria-labelledby="tab-set" hidden>
+      <div class="settings">
+        <div class="fieldset">
+          <h3>Minuteur</h3>
+          <div class="row"><label for="s-focus">Focus (min)</label><input type="number" id="s-focus" min="1" max="120"></div>
+          <div class="row"><label for="s-short">Pause courte (min)</label><input type="number" id="s-short" min="1" max="60"></div>
+          <div class="row"><label for="s-long">Pause longue (min)</label><input type="number" id="s-long" min="1" max="60"></div>
+          <div class="row"><label for="s-cycle">Focus avant pause longue</label><input type="number" id="s-cycle" min="1" max="12"></div>
+        </div>
+        <div class="fieldset">
+          <h3>Barème d'effort</h3>
+          <table class="scale-table"><thead><tr><th>Taille</th><th>Points</th><th>Pomodoros attendus</th></tr></thead><tbody id="scaleBody"></tbody></table>
+        </div>
+        <div class="fieldset">
+          <h3>Widget</h3>
+          <div class="row"><span>Coin de l'écran</span><div class="corner-pick" id="cornerSet" role="group" aria-label="Coin de l'écran"></div></div>
+          <div class="row"><span>Thème</span><div class="seg" id="themeSeg2" role="group" aria-label="Thème"><button type="button" data-v="auto">Auto</button><button type="button" data-v="light">Clair</button><button type="button" data-v="dark">Sombre</button></div></div>
+          <div class="row"><label for="s-autostart">Lancer au démarrage du Mac</label><input class="switch" type="checkbox" id="s-autostart" checked></div>
+        </div>
+        <div class="fieldset">
+          <h3>Son</h3>
+          <div class="row"><label for="s-sound">Tintement en fin de session</label><input class="switch" type="checkbox" id="s-sound" checked></div>
+          <div class="row"><label for="s-vol">Volume</label><input type="range" id="s-vol" min="0" max="1" step="0.05" value="0.6"></div>
+          <div class="row"><span></span><button class="btn small" type="button" id="testSound">Écouter</button></div>
+        </div>
+        <div class="fieldset">
+          <h3>Données</h3>
+          <div class="path">~/Library/Mobile Documents/com~apple~CloudDocs/Sakura/sakura-data.json</div>
+          <div class="sync"><span>Sauvegardé dans iCloud Drive · 7 sauvegardes quotidiennes conservées</span></div>
+          <div class="row" style="justify-content:flex-start"><button class="btn small" type="button" data-proto>Changer d'emplacement…</button><button class="btn small" type="button" data-proto>Exporter</button><button class="btn small" type="button" data-proto>Importer</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== Premier lancement ===================== -->
+<section class="block" id="onboarding">
+  <div class="block-head">
+    <div>
+      <div class="eyebrow">Premier lancement</div>
+      <h2>Trois réglages, puis au travail</h2>
+      <p>Affiché une seule fois. « Commencer » applique tes choix au widget ci-dessus et le replie en mode compact.</p>
+    </div>
+  </div>
+  <form class="onboard" id="obForm">
+    <header><svg class="enso" data-enso="23" data-progress="1" viewBox="0 0 100 100"></svg><div><h3>Bienvenue dans Sakura</h3><p>Un minuteur, tes tâches du jour, et ton rythme dans le temps.</p></div></header>
+    <div class="ob-field"><span class="lbl" id="ob-focus-l">Durée d'un focus</span>
+      <div class="seg" id="obFocus" role="group" aria-labelledby="ob-focus-l"><button type="button" data-v="15">15 min</button><button type="button" data-v="25" aria-pressed="true">25 min</button><button type="button" data-v="45">45 min</button><button type="button" data-v="50">50 min</button></div>
+    </div>
+    <div class="ob-field"><span class="lbl">Coin de l'écran</span><div class="corner-pick" id="obCorner" role="group" aria-label="Coin de l'écran"></div></div>
+    <div class="ob-field"><label for="obTask">Ta première tâche</label><input type="text" id="obTask" placeholder="Synthèse des entretiens #M"><small>Ajoute <b>#XS</b>, <b>#S</b>, <b>#M</b>, <b>#L</b> ou <b>#XL</b> pour estimer l'effort. Sans rien, ce sera S.</small></div>
+    <div><button class="btn primary" type="submit">Commencer</button></div>
+  </form>
+</section>
+
+<!-- ===================== États ===================== -->
+<section class="block" id="etats">
+  <div class="block-head">
+    <div>
+      <div class="eyebrow">États limites</div>
+      <h2>Ce que l'écran dit quand il n'y a rien, ou quand ça casse</h2>
+    </div>
+  </div>
+  <div class="states">
+    <div class="state">
+      <h3>Aucune tâche</h3>
+      <div class="stage"><div class="panel-card">
+        <div class="w-section-title"><h3>Priorités du jour</h3></div>
+        <p class="empty">Rien d'épinglé pour aujourd'hui. Écris ta tâche ci-dessous, par exemple <code>Relire la spec #S</code>.</p>
+        <input class="quick" type="text" placeholder="Ajouter : Relire la spec #S" aria-label="Ajout rapide (exemple)">
+      </div></div>
+    </div>
+    <div class="state">
+      <h3>Aucune activité</h3>
+      <div class="stage"><div class="panel-card">
+        <div class="w-heat"><div class="heat mini" data-empty-heat></div><div class="today-pts"><b>0</b><span>points aujourd'hui</span></div></div>
+        <p class="empty">Ta première case se colorera quand tu termineras une tâche.</p>
+      </div></div>
+    </div>
+    <div class="state">
+      <h3>Minuteur arrêté, aucune tâche choisie</h3>
+      <div class="stage"><div class="widget c-tr" style="position:relative">
+        <div class="w-compact"><svg class="enso" data-enso="11" data-progress="0" viewBox="0 0 100 100"></svg><div><div class="t">25:00</div><div class="task">Choisis une tâche, ou lance un focus libre</div></div><span class="pill">Arrêté</span></div>
+      </div></div>
+    </div>
+    <div class="state">
+      <h3>Fin de session, widget replié</h3>
+      <div class="stage" style="gap:12px">
+        <div class="notif" style="width:100%"><svg class="enso" data-enso="5" data-progress="1" viewBox="0 0 100 100"></svg><div><b>Sakura · Focus terminé</b>25 min sur « Audit de l'onboarding ». La pause de 5 min commence.</div></div>
+        <div class="widget c-tr is-break" style="position:relative"><span class="pending-dot"></span>
+          <div class="w-compact"><svg class="enso break" data-enso="11" data-progress="0.12" viewBox="0 0 100 100"></svg><div><div class="t">04:24</div><div class="task">Audit de l'onboarding</div></div><span class="pill break">Pause</span></div>
+        </div>
+      </div>
+      <p>La pastille rose garde les pétales pour le prochain survol.</p>
+    </div>
+    <div class="state">
+      <h3>Fichier de données illisible</h3>
+      <div class="stage"><div class="panel-card alert">
+        <h4>Impossible de lire tes données</h4>
+        <p><b>sakura-data.json</b> est endommagé (JSON invalide, ligne 214). La dernière sauvegarde date d'aujourd'hui à 09:12 et contient 31 tâches.</p>
+        <div class="acts"><button class="btn small primary" type="button" data-proto>Restaurer la sauvegarde de 09:12</button><button class="btn small" type="button" data-proto>Choisir un autre fichier</button></div>
+      </div></div>
+    </div>
+    <div class="state">
+      <h3>Fichier encore dans iCloud</h3>
+      <div class="stage"><div class="panel-card">
+        <div class="sync"><span class="spin" aria-hidden="true"></span><span>Téléchargement de tes données depuis iCloud Drive…</span></div>
+        <p class="empty">Le minuteur fonctionne déjà. Tes tâches s'afficheront dès que le fichier sera là.</p>
+      </div></div>
+      <p>Cas « stockage optimisé » de macOS (D-014) : on attend au lieu de croire le fichier vide.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li>Pétales : uniquement à la fin d'un focus et quand une tâche est cochée. Jamais en boucle.</li>
+    <li>« Mouvement réduit » (en haut) imite <code>prefers-reduced-motion</code> : aucun pétale, et l'ensō avance par paliers de 1/12.</li>
+    <li>Le son est un tintement synthétisé pour le prototype. L'app embarquera un vrai enregistrement de bol.</li>
+  </ul>
+</section>
+
+<footer class="end">Prototype Sakura · Phase 1 · décisions dans DECISIONS.md (D-013 à D-018).</footer>
+</main>
+
+<div class="tip" id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const SIZES = ["XS", "S", "M", "L", "XL"];
+const reducedMQ = matchMedia("(prefers-reduced-motion: reduce)");
+const reduced = () => reducedMQ.matches || document.documentElement.classList.contains("rm");
+
+/* ---------- horloge virtuelle (accélérable) ---------- */
+let base = { real: Date.now(), virt: Date.now() }, speed = 60;
+const now = () => base.virt + (Date.now() - base.real) * speed;
+function setSpeed(s) { base = { real: Date.now(), virt: now() }; speed = s; }
+
+/* ---------- dates ---------- */
+const pad = n => String(n).padStart(2, "0");
+const dayKey = t => { const d = new Date(t); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+const sod = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d; };
+const addDays = (t, n) => { const d = new Date(t); d.setDate(d.getDate() + n); return d; };
+const fmtDay = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+const fmtMonth = new Intl.DateTimeFormat("fr-FR", { month: "short" });
+
+/* ---------- RNG déterministe ---------- */
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const R = rng(20261005);
+const pick = a => a[Math.floor(R() * a.length)];
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+/* ---------- état ---------- */
+const S = {
+  scale: { XS: { pts: 1, exp: 1 }, S: { pts: 2, exp: 2 }, M: { pts: 3, exp: 4 }, L: { pts: 5, exp: 8 }, XL: { pts: 8, exp: 12 } },
+  settings: { focus: 25, short: 5, long: 15, cycle: 4, corner: "tr", sound: true, volume: 0.6, theme: "auto" },
+  tasks: [], archive: [], sessions: [], histDays: {},
+  timer: { phase: "idle", next: "focus", startedAt: null, pausedAt: null, pausedMs: 0, focusCount: 0 },
+  current: null, pendingPetals: false,
+};
+
+/* ---------- données factices ---------- */
+const POOL = ["Audit de l'onboarding", "Maquette de l'écran de paiement", "Revue accessibilité du formulaire", "Atelier avec l'équipe produit", "Prototype du tableau de bord", "Synthèse des entretiens utilisateurs", "Mettre à jour la bibliothèque d'icônes", "États vides de la recherche", "Spec du composant Toast", "Préparer la démo de vendredi", "Répondre aux retours dev sur le header", "Benchmark des filtres", "Parcours de résiliation", "Revoir les tokens de couleur", "Guide des tests utilisateurs", "Wireframes des notifications", "Microcopy des messages d'erreur", "Handoff de la page profil", "Planifier le sprint design", "Refonte des cartes produit", "Vérifier les contrastes du mode sombre", "Écran de bienvenue mobile", "Documenter le composant Tableau", "Variantes du bouton principal", "Animation de chargement", "Relire la PR du menu", "Carte d'empathie client B2B", "Entretien client n° 4", "Nettoyer le fichier Figma", "Revue design hebdo", "Arborescence du centre d'aide", "Maquette de l'e-mail de relance", "Parcours d'invitation d'équipe", "Composant Date picker", "Hiérarchie de la page tarifs", "Retours sur la charte illustration", "Audit des formulaires", "Préparer la rétro", "Analyse des heatmaps Hotjar", "Écran de confirmation de commande"];
+const FACTOR = { XS: 1.0, S: 0.72, M: 1.38, L: 1.08, XL: 1.2 };
+function genHistory() {
+  const today = sod(Date.now());
+  let xl = 0;
+  for (let d = 119; d >= 1; d--) {
+    const day = addDays(today, -d), dow = day.getDay(), weekend = dow === 0 || dow === 6;
+    const k = dayKey(day);
+    const active = R() < (weekend ? 0.12 : 0.82) || d <= 6 && !weekend;
+    if (!active) continue;
+    const ramp = 0.55 + 0.45 * (1 - d / 120);
+    const n = Math.floor(R() * 4 * ramp + (R() < 0.2 ? 0 : 0.6));
+    let pomos = 0;
+    for (let i = 0; i < n; i++) {
+      let size = (r => r < .25 ? "XS" : r < .55 ? "S" : r < .85 ? "M" : r < .97 ? "L" : "XL")(R());
+      if (size === "XL" && xl >= 3) size = "L";
+      if (size === "XL") xl++;
+      const p = Math.max(1, Math.round(S.scale[size].exp * FACTOR[size] * (0.78 + R() * 0.44)));
+      pomos += Math.min(p, 6);
+      const t = new Date(day); t.setHours(9 + Math.floor(R() * 9), Math.floor(R() * 60));
+      S.archive.push({ id: uid(), title: pick(POOL), size, status: "done", pomodorosSpent: p, completedAt: t.toISOString() });
+    }
+    pomos += Math.floor(R() * 3);
+    if (pomos === 0 && n === 0) pomos = 2 + Math.floor(R() * 3);
+    S.histDays[k] = { done: pomos, interrupted: R() < .35 ? 1 : 0 };
+  }
+}
+function genTasks() {
+  const titles = POOL.slice().sort(() => R() - .5).slice(0, 30);
+  const t0 = sod(Date.now());
+  const specs = [
+    ["doing", "M", true, 2], ["todo", "S", true, 0], ["todo", "XL", true, 3],
+    ...Array.from({ length: 11 }, () => ["todo", null, false, 0]),
+    ...Array.from({ length: 2 }, () => ["todo", null, true, 0]),
+    ...Array.from({ length: 12 }, () => ["done", null, false, -1]),
+    ["dropped", "M", false, 1], ["dropped", "S", false, 0],
+  ];
+  specs.forEach(([status, size, priority, pom], i) => {
+    const sz = size || pick(["XS", "S", "S", "M", "M", "L"]);
+    const t = { id: uid(), title: titles[i], size: sz, priority, status, createdAt: addDays(t0, -Math.floor(R() * 12)).toISOString(), pomodorosSpent: pom, order: i, updatedAt: new Date().toISOString() };
+    if (status === "done") {
+      t.pomodorosSpent = Math.max(1, Math.round(S.scale[sz].exp * FACTOR[sz] * (0.8 + R() * .4)));
+      const back = i < 17 ? 0 : 1 + Math.floor(R() * 3);
+      const c = addDays(t0, -back); c.setHours(back === 0 ? 9 + (i % 3) : 10 + Math.floor(R() * 7), Math.floor(R() * 60));
+      t.completedAt = c.toISOString();
+    }
+    S.tasks.push(t);
+  });
+  S.current = S.tasks[0].id;
+}
+genHistory(); genTasks();
+
+/* ---------- calculs (seront des fonctions pures testées en Phase 2) ---------- */
+const pts = size => S.scale[size].pts;
+const allDone = () => S.archive.concat(S.tasks.filter(t => t.status === "done"));
+function dayMap() {
+  const m = {};
+  const get = k => m[k] || (m[k] = { pts: 0, tasks: [], pomos: 0, interrupted: 0 });
+  for (const [k, v] of Object.entries(S.histDays)) { const d = get(k); d.pomos += v.done; d.interrupted += v.interrupted; }
+  for (const t of allDone()) { const d = get(dayKey(t.completedAt)); d.pts += pts(t.size); d.tasks.push(t); }
+  for (const s of S.sessions) if (s.type === "focus") { const d = get(dayKey(s.endedAt)); s.completed ? d.pomos++ : d.interrupted++; }
+  return m;
+}
+const level = p => p <= 0 ? 0 : p <= 2 ? 1 : p <= 5 ? 2 : p <= 9 ? 3 : 4;
+function calibration() {
+  return SIZES.map(size => {
+    const done = allDone().filter(t => t.size === size && t.pomodorosSpent >= 1);
+    const exp = S.scale[size].exp;
+    const avg = done.length ? done.reduce((a, t) => a + t.pomodorosSpent, 0) / done.length : 0;
+    const ratio = done.length ? avg / exp : null;
+    return { size, n: done.length, exp, avg, ratio, ok: done.length >= 5 };
+  });
+}
+function streak(m) {
+  let d = sod(now()), n = 0;
+  const active = k => m[k] && (m[k].pts > 0 || m[k].pomos > 0);
+  if (!active(dayKey(d))) d = addDays(d, -1);
+  while (active(dayKey(d))) { n++; d = addDays(d, -1); }
+  return n;
+}
+
+/* ---------- minuteur à horodatages ---------- */
+const durMs = ph => (ph === "focus" ? S.settings.focus : ph === "short_break" ? S.settings.short : S.settings.long) * 60000;
+function elapsed() { const T = S.timer; if (!T.startedAt) return 0; return (T.pausedAt ?? now()) - T.startedAt - T.pausedMs; }
+function remaining() { const T = S.timer; return T.phase === "idle" ? durMs(T.next) : Math.max(0, durMs(T.phase) - elapsed()); }
+const running = () => S.timer.phase !== "idle" && !S.timer.pausedAt;
+function logSession(completed) {
+  const T = S.timer;
+  S.sessions.push({ id: uid(), type: T.phase, taskId: T.phase === "focus" ? S.current || undefined : undefined, startedAt: new Date(T.startedAt).toISOString(), endedAt: new Date(now()).toISOString(), completed, pausedMs: T.pausedMs });
+}
+function startPhase(ph) { Object.assign(S.timer, { phase: ph, startedAt: now(), pausedAt: null, pausedMs: 0 }); }
+function toggle() {
+  const T = S.timer;
+  if (T.phase === "idle") startPhase(T.next);
+  else if (T.pausedAt) { T.pausedMs += now() - T.pausedAt; T.pausedAt = null; }
+  else T.pausedAt = now();
+  render();
+}
+function nextAfterFocus() { return S.timer.focusCount % S.settings.cycle === 0 ? "long_break" : "short_break"; }
+function complete() {
+  const T = S.timer, ph = T.phase;
+  logSession(true);
+  if (ph === "focus") {
+    T.focusCount++;
+    const task = S.tasks.find(t => t.id === S.current);
+    if (task) task.pomodorosSpent++;
+    const nb = nextAfterFocus();
+    startPhase(nb);                               // D-016 : la pause démarre seule
+    celebrate("focus", task, nb);
+  } else {
+    Object.assign(T, { phase: "idle", next: "focus", startedAt: null, pausedAt: null, pausedMs: 0 });
+    chime(.5);
+    toast("Pause terminée. Lance le focus quand tu es prêt.");
+  }
+  render();
+}
+function skip() {
+  const T = S.timer;
+  if (T.phase === "idle") { T.next = T.next === "focus" ? "short_break" : "focus"; render(); return; }
+  logSession(false);
+  if (T.phase === "focus") startPhase("short_break");   // un focus passé ne compte pas pour la pause longue
+  else Object.assign(T, { phase: "idle", next: "focus", startedAt: null, pausedAt: null, pausedMs: 0 });
+  render();
+}
+function reset() {
+  const T = S.timer;
+  if (T.phase !== "idle") logSession(false);
+  Object.assign(T, { phase: "idle", next: "focus", startedAt: null, pausedAt: null, pausedMs: 0 });
+  render();
+}
+
+/* ---------- ensō ---------- */
+let ensoId = 0;
+function buildEnso(svg) {
+  const seed = +svg.dataset.enso || 1, r = rng(seed * 7919), id = "e" + (++ensoId);
+  const ph1 = r() * 6, ph2 = r() * 6, N = 140, a0 = (-104 + r() * 8) * Math.PI / 180, sweep = (330 + r() * 12) * Math.PI / 180, Rr = 38;
+  const outer = [], inner = [], center = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, a = a0 + t * sweep;
+    const rad = Rr + 1.3 * Math.sin(3 * a + ph1) + .7 * Math.sin(7 * a + ph2);
+    let w = t < .05 ? 5 + t / .05 * 5.5 : 10.5 * (1 - .82 * Math.pow((t - .05) / .95, 1.25));
+    w += .7 * Math.sin(13 * a + ph2) + (t > .8 ? (r() - .5) * 1.2 : 0);
+    w = Math.max(1.1, w);
+    const c = Math.cos(a), s = Math.sin(a);
+    outer.push([50 + (rad + w / 2) * c, 50 + (rad + w / 2) * s]);
+    inner.push([50 + (rad - w / 2) * c, 50 + (rad - w / 2) * s]);
+    center.push([50 + rad * c, 50 + rad * s]);
+  }
+  const f = p => p[0].toFixed(2) + " " + p[1].toFixed(2);
+  const sc = center[0], st = [sc[0] - 2.6 * Math.cos(a0 + .3), sc[1] - 2.6 * Math.sin(a0 + .3)];
+  const brush = "M" + outer.map(f).join("L") + "L" + inner.reverse().map(f).join("L") + "Q" + f(st) + " " + f(outer[0]) + "Z";
+  const mid = "M" + center.map(f).join("L");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = `<defs><filter id="r${id}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="${seed}" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.8"/></filter>
+    <mask id="m${id}" maskUnits="userSpaceOnUse" x="-5" y="-5" width="110" height="110"><path class="reveal" d="${mid}" pathLength="1" stroke="#fff" stroke-width="18" fill="none" stroke-dasharray="1 1" stroke-dashoffset="1"/></mask></defs>
+    <g filter="url(#r${id})"><path class="ghost" d="${brush}"/><path class="ink" d="${brush}" mask="url(#m${id})"/></g>`;
+  svg._reveal = $(".reveal", svg);
+  svg._last = -1;
+  setEnso(svg, svg.dataset.progress != null ? +svg.dataset.progress : 0, true);
+}
+function setEnso(svg, f, instant) {
+  if (reduced()) f = Math.floor(f * 12 + 1e-6) / 12;
+  f = Math.min(1, Math.max(0, f));
+  if (Math.abs(f - svg._last) < 0.0005) return;
+  // retour en arrière (nouvelle phase) : pas de transition, sinon l'ensō « se dé-dessine »
+  const back = f < svg._last;
+  svg.classList.toggle("instant", !!instant || back);
+  svg._last = f;
+  svg._reveal.setAttribute("stroke-dashoffset", (1 - f).toFixed(4));
+}
+$$("svg[data-enso]").forEach(buildEnso);
+
+/* ---------- pétales + son ---------- */
+const PETAL = '<svg viewBox="0 0 14 13"><path d="M7 .4C9.9 1.6 13.4 4.6 12.9 8.3 12.5 11 10.1 12.6 8.2 11.4L7 10.1 5.8 11.4C3.9 12.6 1.5 11 1.1 8.3.6 4.6 4.1 1.6 7 .4Z"/></svg>';
+function petals(el) {
+  if (reduced()) return;
+  const b = el.getBoundingClientRect(), n = 8 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("span");
+    p.className = "petal"; p.innerHTML = PETAL;
+    const x0 = b.left + Math.random() * b.width, y0 = b.top + Math.random() * Math.min(40, b.height);
+    const drift = (Math.random() - .5) * 140 - 30;
+    p.style.cssText = `--x0:${x0}px;--y0:${y0}px;--x1:${x0 + drift}px;--y1:${y0 + 220 + Math.random() * 160}px;--r0:${Math.random() * 180}deg;--r1:${Math.random() * 540 - 270}deg;--d:${2.3 + Math.random() * .7}s;--delay:${Math.random() * .5}s;transform:scale(${.7 + Math.random() * .6})`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3600);
+  }
+}
+let actx;
+function chime(gainMul = 1) {
+  if (!S.settings.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t = actx.currentTime, master = actx.createGain();
+    master.gain.value = S.settings.volume * .22 * gainMul; master.connect(actx.destination);
+    [[392, 1, 5.5], [394.2, .6, 5], [1062, .35, 3.4], [2018, .16, 2.2], [3110, .07, 1.4]].forEach(([f, a, d]) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + .015); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + d + .1);
+    });
+  } catch (e) { /* audio indisponible : silence */ }
+}
+const W = $("#w");
+function celebrate(kind, task, nextBreak) {
+  chime();
+  if (W.classList.contains("open")) petals(W);
+  else {
+    S.pendingPetals = true;
+    const mins = S.settings.focus, br = nextBreak === "long_break" ? S.settings.long : S.settings.short;
+    showNotif(`Focus terminé : ${mins} min${task ? " sur « " + task.title + " »" : ""}. La pause de ${br} min commence.`);
+  }
+}
+let notifT;
+function showNotif(text) {
+  const n = $("#notif"); $("#notifText").textContent = text; n.hidden = false;
+  clearTimeout(notifT); notifT = setTimeout(() => n.hidden = true, 6000);
+}
+
+/* ---------- widget : survol ---------- */
+let openT, closeT, hovering = false;
+const typing = () => { const a = document.activeElement; return a && W.contains(a) && (a.tagName === "INPUT" || a.tagName === "SELECT"); };
+function openW() { W.classList.add("open"); if (S.pendingPetals) { S.pendingPetals = false; setTimeout(() => petals(W), 280); render(); } }
+function closeW() { if (!typing() && !hovering) W.classList.remove("open"); }
+W.addEventListener("mouseenter", () => { hovering = true; clearTimeout(closeT); clearTimeout(openT); openT = setTimeout(openW, 150); });
+W.addEventListener("mouseleave", () => { hovering = false; clearTimeout(openT); clearTimeout(closeT); closeT = setTimeout(closeW, 600); });
+W.addEventListener("focusout", () => setTimeout(() => { if (!W.contains(document.activeElement) && !hovering) { clearTimeout(closeT); closeT = setTimeout(closeW, 600); } }, 0));
+W.addEventListener("focusin", () => { clearTimeout(closeT); openW(); });
+W.addEventListener("scroll", () => { W.scrollTop = 0; W.scrollLeft = 0; });   // le focus clavier ne doit pas décaler le contenu
+W.addEventListener("touchstart", e => { if (!W.classList.contains("open")) { e.preventDefault(); openW(); } }, { passive: false });
+document.addEventListener("touchstart", e => { if (!W.contains(e.target)) { hovering = false; if (document.activeElement && W.contains(document.activeElement)) document.activeElement.blur(); W.classList.remove("open"); } }, { passive: true });
+
+/* ---------- actions ---------- */
+function quickAdd(raw, priority) {
+  const m = raw.trim().match(/^(.*?)\s*#(XS|S|M|L|XL)\s*$/i);
+  const title = (m ? m[1] : raw).trim();
+  if (!title) return null;
+  const size = m ? m[2].toUpperCase() : "S";            // D-017
+  S.tasks.forEach(t => t.order++);
+  const t = { id: uid(), title, size, priority, status: "todo", createdAt: new Date(now()).toISOString(), pomodorosSpent: 0, order: 0, updatedAt: new Date().toISOString() };
+  S.tasks.push(t);
+  return t;
+}
+function setStatus(task, status) {
+  const was = task.status;
+  task.status = status; task.updatedAt = new Date().toISOString();
+  if (status === "done") { task.completedAt = new Date(now()).toISOString(); if (S.current === task.id) S.current = null; }
+  else delete task.completedAt;                          // D-010
+  if (status === "doing") { S.tasks.forEach(t => { if (t !== task && t.status === "doing") t.status = "todo"; }); S.current = task.id; }
+  if (status === "done" && was !== "done") { petals(W.classList.contains("open") ? W : $("#tasklist")); chime(.6); }
+}
+function setCurrent(id) {
+  S.tasks.forEach(t => { if (t.status === "doing") t.status = "todo"; });
+  S.current = id || null;
+  const t = S.tasks.find(x => x.id === id); if (t) t.status = "doing";
+}
+
+/* ---------- rendu ---------- */
+const PH_LABEL = { focus: "Focus", short_break: "Pause courte", long_break: "Pause longue" };
+const fmt = ms => { const s = Math.ceil(ms / 1000); return pad(Math.floor(s / 60)) + ":" + pad(s % 60); };
+function renderTimer() {
+  const T = S.timer, rem = remaining();
+  if (running() && rem <= 0) { complete(); return; }
+  const time = fmt(rem);
+  const isBreak = T.phase === "short_break" || T.phase === "long_break";
+  const frac = T.phase === "idle" ? 0 : elapsed() / durMs(T.phase);
+  $$("[data-bind=time]").forEach(e => e.textContent = time);
+  $$("svg[data-role=timer-enso], svg[data-role=tray-enso]").forEach(s => { setEnso(s, frac); s.classList.toggle("break", isBreak); });
+  W.classList.toggle("is-break", isBreak);
+  let pill = "Arrêté", cls = "";
+  if (T.phase !== "idle") { pill = T.pausedAt ? "Suspendu" : isBreak ? "Pause" : "Focus"; cls = T.pausedAt ? "" : isBreak ? "break" : "focus"; }
+  $$("[data-bind=pill]").forEach(e => { e.textContent = pill; e.className = "pill " + cls; });
+  const nInCycle = (T.focusCount % S.settings.cycle) + (T.phase === "focus" || (T.phase === "idle" && T.next === "focus") ? 1 : 0);
+  $("[data-bind=phaseLine]").textContent = T.phase === "idle"
+    ? (T.next === "focus" ? `Prochain : focus ${Math.max(1, nInCycle)} sur ${S.settings.cycle}` : "Prochain : " + PH_LABEL[T.next].toLowerCase())
+    : T.phase === "focus" ? `Focus ${nInCycle} sur ${S.settings.cycle}` : PH_LABEL[T.phase] + ` · ${T.phase === "long_break" ? S.settings.long : S.settings.short} min`;
+  const btn = $("[data-act=toggle]");
+  btn.textContent = T.phase === "idle" ? "Démarrer" : T.pausedAt ? "Reprendre" : "Suspendre";
+  const d = new Date(now());
+  $("#clock").textContent = d.toLocaleDateString("fr-FR", { weekday: "short" }) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+function dotsHTML(task) {
+  const exp = S.scale[task.size].exp, spent = task.pomodorosSpent, shown = Math.min(Math.max(exp, spent), 12);
+  let h = "";
+  for (let i = 0; i < shown; i++) h += `<i class="${i < Math.min(spent, exp) ? "on" : i < spent ? "over" : ""}"></i>`;
+  return h + `<span class="mono">${spent} / ${exp}${task.size === "XL" ? "+" : ""}</span>`;
+}
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function renderWidget() {
+  const cur = S.tasks.find(t => t.id === S.current);
+  $$("[data-bind=taskTitle]").forEach(e => e.textContent = cur ? cur.title : S.timer.phase === "idle" ? "Choisis une tâche, ou lance un focus libre" : "Focus libre");
+  const sel = $("#curTask");
+  const open = S.tasks.filter(t => t.status === "todo" || t.status === "doing").sort((a, b) => (b.priority - a.priority) || a.order - b.order);
+  sel.innerHTML = `<option value="">Aucune tâche (focus libre)</option>` + open.map(t => `<option value="${t.id}" ${t.id === S.current ? "selected" : ""}>${esc(t.title)} · ${t.size}</option>`).join("");
+  $("#curDots").innerHTML = cur ? dotsHTML(cur) : `<span class="muted">Les pomodoros d'un focus libre comptent dans ta journée, pas dans la calibration.</span>`;
+  $("#curHint").hidden = !(cur && cur.size === "XL");
+  const pr = open.filter(t => t.priority);
+  $("#prioCount").textContent = pr.length ? pr.length + (pr.length > 1 ? " épinglées" : " épinglée") : "";
+  $("#prio").innerHTML = pr.length
+    ? pr.slice(0, 3).map(t => `<li><input type="checkbox" class="tick" data-done="${t.id}" aria-label="Terminer ${esc(t.title)}"><span class="title" title="${esc(t.title)}">${esc(t.title)}</span><span class="size ${t.size}">${t.size}</span></li>`).join("") + (pr.length > 3 ? `<li><span></span><span class="more">+ ${pr.length - 3} dans la vue complète</span><span></span></li>` : "")
+    : `<li style="display:block"><p class="empty">Rien d'épinglé pour aujourd'hui. Écris ta tâche ci-dessous, par exemple <code>Relire la spec #S</code>.</p></li>`;
+  $("#pendingDot").hidden = !S.pendingPetals;
+}
+function heatCells(weeks, m, cls) {
+  const today = sod(now()), dow = (today.getDay() + 6) % 7;     // lundi = 0
+  const start = addDays(today, -dow - (weeks - 1) * 7);
+  let h = "";
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = addDays(start, i), k = dayKey(d), v = m[k];
+    if (d > today) { h += `<i class="future"></i>`; continue; }
+    const lv = v ? level(v.pts) : 0, dot = v && v.pts === 0 && v.pomos > 0;
+    h += `<i class="l${lv}${dot ? " dot" : ""}${+d === +today ? " today" : ""}" data-k="${k}"></i>`;
+  }
+  return { h, start };
+}
+function renderHeat(m) {
+  $("#miniHeat").innerHTML = heatCells(12, m).h;
+  const { h, start } = heatCells(26, m);
+  let months = "", last = -1;
+  for (let w = 0; w < 26; w++) {
+    const d = addDays(start, w * 7);
+    if (d.getMonth() !== last) { if (w < 25) months += `<span style="left:${w * 16}px">${fmtMonth.format(d).replace(".", "")}</span>`; last = d.getMonth(); }
+  }
+  $("#bigHeat").innerHTML = `<div class="heat-months">${months}</div><div class="heat-days"><span>lun</span><span></span><span>mer</span><span></span><span>ven</span><span></span><span></span></div><div class="heat big" role="img" aria-label="Activité des 26 dernières semaines">${h}</div>`;
+  const tk = dayKey(now());
+  $("[data-bind=todayPts]").textContent = m[tk] ? m[tk].pts : 0;
+}
+function renderStats(m) {
+  const today = sod(now());
+  let sum = 0, done = 0, intr = 0;
+  for (let i = 0; i < 7; i++) { const v = m[dayKey(addDays(today, -i))]; if (v) sum += v.pts; }
+  for (let i = 0; i < 30; i++) { const v = m[dayKey(addDays(today, -i))]; if (v) { done += v.pomos; intr += v.interrupted; } }
+  const st = streak(m), rate = done + intr ? Math.round(done / (done + intr) * 100) : 0;
+  $("#stats").innerHTML = [
+    [(sum / 7).toFixed(1).replace(".", ","), "points par jour, moyenne 7 jours"],
+    [st, st > 1 ? "jours actifs d'affilée" : "jour actif d'affilée"],
+    [rate + " %", `pomodoros terminés sur 30 jours (${done} sur ${done + intr})`],
+    [(m[dayKey(today)] || { pts: 0 }).pts, "points aujourd'hui"],
+  ].map(([b, s]) => `<div class="stat"><b>${b}</b><span>${s}</span></div>`).join("");
+  // calibration
+  const pos = r => Math.min(100, Math.max(0, (r - .4) / 1.6 * 100));
+  $("#calib").innerHTML = `<div class="scale-labels"><div></div><div></div><div><span>0,4</span><span>1 = juste</span><span>2</span></div><div></div></div>` + calibration().map(c => {
+    if (!c.ok) return `<div class="calib-row"><span class="size ${c.size}">${c.size}</span><span class="nums">${c.n} terminée${c.n > 1 ? "s" : ""} sur 5 nécessaires</span><div class="scale"><div class="axis"></div></div><span class="verdict muted">Pas encore assez de données</span></div>`;
+    const v = c.ratio < .8 ? ["warn", `Tu surestimes tes ${c.size}`] : c.ratio > 1.2 ? ["warn", `Tu sous-estimes tes ${c.size}`] : ["ok", "Estimation juste"];
+    return `<div class="calib-row"><span class="size ${c.size}">${c.size}</span><span class="nums">${c.avg.toFixed(1).replace(".", ",")} réels / ${c.exp} attendus · ${c.n} tâches</span>
+      <div class="scale" title="Ratio ${c.ratio.toFixed(2).replace(".", ",")}"><div class="axis"></div><div class="band" style="left:${pos(.8)}%;width:${pos(1.2) - pos(.8)}%"></div><div class="one" style="left:${pos(1)}%"></div><div class="mark" style="left:${pos(c.ratio)}%"></div></div>
+      <span class="verdict ${v[0]}">${v[1]} <span class="muted mono">(×${c.ratio.toFixed(2).replace(".", ",")})</span></span></div>`;
+  }).join("");
+  // barres 30 jours
+  const days = Array.from({ length: 30 }, (_, i) => { const d = addDays(today, i - 29), k = dayKey(d); return { d, k, p: m[k] ? m[k].pts : 0 }; });
+  const max = Math.max(10, ...days.map(x => x.p)), Wd = 600, H = 120, top = 10, bot = 18, bw = Wd / 30;
+  const y = v => top + (H - top - bot) * (1 - v / max);
+  let svg = `<svg viewBox="0 0 ${Wd} ${H}" role="img" aria-label="Points par jour, 30 derniers jours"><line x1="0" x2="${Wd}" y1="${H - bot}" y2="${H - bot}"/><line x1="0" x2="${Wd}" y1="${y(max / 2)}" y2="${y(max / 2)}" stroke-dasharray="2 3"/><text x="0" y="${y(max / 2) - 3}">${Math.round(max / 2)} pts</text>`;
+  days.forEach((x, i) => {
+    const h = (H - top - bot) * x.p / max;
+    if (x.p > 0) svg += `<rect class="b${i === 29 ? " today" : ""}" x="${i * bw + 3}" y="${H - bot - h}" width="${bw - 6}" height="${h}" rx="2"/>`;
+    svg += `<rect class="hit" data-k="${x.k}" x="${i * bw}" y="0" width="${bw}" height="${H}"/>`;
+    if (i % 7 === 1 || i === 29) svg += `<text x="${i * bw + bw / 2}" y="${H - 4}" text-anchor="middle">${i === 29 ? "auj." : x.d.getDate() + " " + fmtMonth.format(x.d).replace(".", "")}</text>`;
+  });
+  $("#bars").innerHTML = svg + "</svg>";
+}
+
+/* liste des tâches */
+const F = { status: "all", sizes: new Set() };
+const STATUS_ONE = { todo: "À faire", doing: "En cours", done: "Terminée", dropped: "Abandonnée" };
+const STATUS_L = { all: "Toutes", todo: "À faire", doing: "En cours", done: "Terminées", dropped: "Abandonnées" };
+$("#fStatus").innerHTML = Object.entries(STATUS_L).map(([k, v]) => `<button type="button" class="chip" data-st="${k}" aria-pressed="${k === "all"}">${v}</button>`).join("");
+$("#fSize").innerHTML = SIZES.map(s => `<button type="button" class="chip" data-sz="${s}" aria-pressed="false">${s}</button>`).join("");
+const PIN = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M9.8 1.5 14.5 6.2 13.4 7.3 12.6 6.9 9.9 9.6 10.2 12.4 9.1 13.5 6.6 11 3.2 14.4 1.6 14.4 1.6 12.8 5 9.4 2.5 6.9 3.6 5.8 6.4 6.1 9.1 3.4 8.7 2.6Z"/></svg>';
+function renderList() {
+  const list = S.tasks.filter(t => (F.status === "all" || t.status === F.status) && (!F.sizes.size || F.sizes.has(t.size))).sort((a, b) => a.order - b.order);
+  $("#tasklist").innerHTML = list.length ? list.map(t => {
+    const exp = S.scale[t.size].exp;
+    return `<li draggable="true" data-id="${t.id}" class="is-${t.status}">
+      <span class="grip" aria-hidden="true" title="Glisser pour réordonner">⋮⋮</span>
+      <input type="checkbox" class="tick" data-done="${t.id}" ${t.status === "done" ? "checked" : ""} aria-label="Terminer ${esc(t.title)}">
+      <input class="title-in" id="ti-${t.id}" value="${esc(t.title)}" data-edit="${t.id}" aria-label="Titre">
+      <select class="size-sel" data-size="${t.id}" aria-label="Taille">${SIZES.map(s => `<option ${s === t.size ? "selected" : ""}>${s}</option>`).join("")}</select>
+      <span class="pom ${t.pomodorosSpent > exp ? "over" : ""}" title="Pomodoros passés / attendus">${t.pomodorosSpent}/${exp}</span>
+      <button type="button" class="pin" data-pin="${t.id}" aria-pressed="${t.priority}" aria-label="Épingler en priorité">${PIN}</button>
+      <select class="status-sel" data-status="${t.id}" aria-label="Statut">${["todo", "doing", "done", "dropped"].map(s => `<option value="${s}" ${s === t.status ? "selected" : ""}>${STATUS_ONE[s]}</option>`).join("")}</select>
+    </li>`;
+  }).join("") : `<li style="display:block;padding:24px 4px"><p class="empty">Aucune tâche ne correspond à ces filtres.</p></li>`;
+  const counts = S.tasks.reduce((a, t) => (a[t.status]++, a), { todo: 0, doing: 0, done: 0, dropped: 0 });
+  $("#listFoot").textContent = `${S.tasks.length} tâches · ${counts.todo} à faire · ${counts.doing} en cours · ${counts.done} terminées · ${counts.dropped} abandonnées · ${S.archive.length} tâches plus anciennes alimentent l'activité.`;
+}
+let lastMapAt = 0;
+function render() {
+  renderTimer(); renderWidget(); renderList();
+  const m = dayMap(); renderHeat(m); renderStats(m);
+}
+
+/* ---------- événements ---------- */
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-act]");
+  if (a) { const k = a.dataset.act; k === "toggle" ? toggle() : k === "skip" ? skip() : reset(); return; }
+  const p = e.target.closest("[data-pin]");
+  if (p) { const t = S.tasks.find(x => x.id === p.dataset.pin); t.priority = !t.priority; render(); return; }
+  const st = e.target.closest("[data-st]");
+  if (st) { F.status = st.dataset.st; $$("#fStatus .chip").forEach(c => c.setAttribute("aria-pressed", c === st)); renderList(); return; }
+  const sz = e.target.closest("[data-sz]");
+  if (sz) { const s = sz.dataset.sz; F.sizes.has(s) ? F.sizes.delete(s) : F.sizes.add(s); sz.setAttribute("aria-pressed", F.sizes.has(s)); renderList(); return; }
+  if (e.target.closest("[data-proto]")) toast("Disponible dans l'app, pas dans le prototype.");
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.dataset.done) { const task = S.tasks.find(x => x.id === t.dataset.done); setStatus(task, t.checked ? "done" : "todo"); render(); }
+  else if (t.dataset.size) { S.tasks.find(x => x.id === t.dataset.size).size = t.value; render(); }
+  else if (t.dataset.status) { setStatus(S.tasks.find(x => x.id === t.dataset.status), t.value); render(); }
+  else if (t.dataset.edit) { const task = S.tasks.find(x => x.id === t.dataset.edit); task.title = t.value.trim() || task.title; render(); }
+  else if (t.id === "curTask") { setCurrent(t.value); render(); }
+});
+function bindQuick(input, priority) {
+  input.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    const t = quickAdd(input.value, priority);
+    if (t) { input.value = ""; toast(`Ajoutée : ${t.title} · ${t.size}${priority ? " · épinglée" : ""}`); render(); }
+  });
+}
+bindQuick($("#quickW"), true); bindQuick($("#quickF"), false);
+$("#openFull").addEventListener("click", () => { W.classList.remove("open"); $("#complete").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" }); });
+$("#simEnd").addEventListener("click", () => {
+  if (S.timer.phase !== "focus") startPhase("focus");
+  S.timer.startedAt = now() - durMs("focus") - S.timer.pausedMs; S.timer.pausedAt = null;
+  W.classList.add("open"); renderTimer();
+});
+$("#simEndClosed").addEventListener("click", () => {
+  hovering = false; W.classList.remove("open");
+  if (S.timer.phase !== "focus") startPhase("focus");
+  S.timer.startedAt = now() - durMs("focus") - S.timer.pausedMs; S.timer.pausedAt = null;
+  renderTimer();
+});
+
+/* glisser-déposer */
+let dragId = null;
+const TL = $("#tasklist");
+TL.addEventListener("dragstart", e => { const li = e.target.closest("li[data-id]"); if (!li) return; dragId = li.dataset.id; li.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", dragId); } catch (_) {} });
+TL.addEventListener("dragend", () => { dragId = null; $$("li", TL).forEach(l => l.classList.remove("dragging", "over")); });
+TL.addEventListener("dragover", e => { if (!dragId) return; e.preventDefault(); const li = e.target.closest("li[data-id]"); $$("li", TL).forEach(l => l.classList.toggle("over", l === li && li.dataset.id !== dragId)); });
+TL.addEventListener("drop", e => {
+  e.preventDefault(); const li = e.target.closest("li[data-id]"); if (!li || !dragId || li.dataset.id === dragId) return;
+  const sorted = S.tasks.slice().sort((a, b) => a.order - b.order), from = sorted.findIndex(t => t.id === dragId);
+  const [mv] = sorted.splice(from, 1); sorted.splice(sorted.findIndex(t => t.id === li.dataset.id), 0, mv);
+  sorted.forEach((t, i) => t.order = i); render();
+});
+
+/* onglets */
+$$(".tabs [role=tab]").forEach(tab => tab.addEventListener("click", () => {
+  $$(".tabs [role=tab]").forEach(t => { const on = t === tab; t.setAttribute("aria-selected", on); $("#" + t.getAttribute("aria-controls")).hidden = !on; });
+}));
+
+/* infobulles */
+const tip = $("#tip");
+function showTip(el, k) {
+  const v = dayMap()[k] || { pts: 0, tasks: [], pomos: 0 };
+  const [y, mo, d] = k.split("-").map(Number), date = fmtDay.format(new Date(y, mo - 1, d));
+  const tl = v.tasks.slice(0, 3).map(t => `<li>${esc(t.title)} · ${t.size}</li>`).join("") + (v.tasks.length > 3 ? `<li>+ ${v.tasks.length - 3} autres</li>` : "");
+  tip.innerHTML = `<b>${date.charAt(0).toUpperCase() + date.slice(1)}</b><br>${v.pts} pt${v.pts > 1 ? "s" : ""} · ${v.tasks.length} tâche${v.tasks.length > 1 ? "s" : ""} · ${v.pomos} pomodoro${v.pomos > 1 ? "s" : ""}${tl ? `<ul>${tl}</ul>` : ""}`;
+  const r = el.getBoundingClientRect();
+  tip.classList.add("on");
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  tip.style.left = Math.min(innerWidth - tw - 8, Math.max(8, r.left + r.width / 2 - tw / 2)) + "px";
+  tip.style.top = (r.top - th - 8 < 8 ? r.bottom + 8 : r.top - th - 8) + "px";
+}
+document.addEventListener("mouseover", e => { const c = e.target.closest("[data-k]"); if (c) showTip(c, c.dataset.k); else tip.classList.remove("on"); });
+addEventListener("scroll", () => tip.classList.remove("on"), { passive: true });
+
+/* thème, vitesse, mouvement */
+function setTheme(v) {
+  S.settings.theme = v;
+  if (v === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", v);
+  $$("#themeSeg button, #themeSeg2 button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === v));
+}
+$$("#themeSeg button, #themeSeg2 button").forEach(b => b.addEventListener("click", () => setTheme(b.dataset.v)));
+setTheme("auto");
+$$("#speedSeg button").forEach(b => b.addEventListener("click", () => { setSpeed(+b.dataset.v); $$("#speedSeg button").forEach(x => x.setAttribute("aria-pressed", x === b)); }));
+$("#rmToggle").checked = reducedMQ.matches;
+if (reducedMQ.matches) document.documentElement.classList.add("rm");
+$("#rmToggle").addEventListener("change", e => { document.documentElement.classList.toggle("rm", e.target.checked); $$("svg[data-enso]").forEach(s => { const l = s._last; s._last = -1; setEnso(s, s.dataset.progress != null ? +s.dataset.progress : l, true); }); renderTimer(); });
+
+/* coins */
+function cornerPicker(el, onPick) {
+  const L = { tl: "Haut gauche", tr: "Haut droite", bl: "Bas gauche", br: "Bas droite" };
+  el.innerHTML = ["tl", "tr", "bl", "br"].map(c => `<button type="button" data-c="${c}" aria-label="${L[c]}" aria-pressed="${c === S.settings.corner}"></button>`).join("");
+  el.addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) onPick(b.dataset.c); });
+}
+function setCorner(c) {
+  S.settings.corner = c;
+  W.classList.remove("c-tr", "c-tl", "c-br", "c-bl"); W.classList.add("c-" + c);
+  $$(".corner-pick button").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === c));
+  const n = $("#notif"); n.style.right = c.endsWith("r") ? "" : "12px";
+}
+let obCorner = "tr";
+cornerPicker($("#cornerSet"), setCorner);
+cornerPicker($("#obCorner"), c => { obCorner = c; $$("#obCorner button").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === c)); });
+
+/* réglages */
+const bindNum = (id, key) => { const el = $(id); el.value = S.settings[key]; el.addEventListener("input", () => { const v = Math.round(+el.value); if (v >= +el.min && v <= +el.max) { S.settings[key] = v; render(); } }); };
+bindNum("#s-focus", "focus"); bindNum("#s-short", "short"); bindNum("#s-long", "long"); bindNum("#s-cycle", "cycle");
+$("#scaleBody").innerHTML = SIZES.map(s => `<tr><td><span class="size ${s}">${s}</span></td><td><input type="number" min="1" max="40" id="sc-p-${s}" value="${S.scale[s].pts}" aria-label="Points ${s}"></td><td><input type="number" min="1" max="40" id="sc-e-${s}" value="${S.scale[s].exp}" aria-label="Pomodoros attendus ${s}"></td></tr>`).join("");
+SIZES.forEach(s => {
+  $("#sc-p-" + s).addEventListener("input", e => { const v = +e.target.value; if (v >= 1) { S.scale[s].pts = v; render(); } });
+  $("#sc-e-" + s).addEventListener("input", e => { const v = +e.target.value; if (v >= 1) { S.scale[s].exp = v; render(); } });
+});
+$("#s-sound").addEventListener("change", e => S.settings.sound = e.target.checked);
+$("#s-vol").addEventListener("input", e => S.settings.volume = +e.target.value);
+$("#testSound").addEventListener("click", () => { const was = S.settings.sound; S.settings.sound = true; chime(); S.settings.sound = was; });
+
+/* premier lancement */
+let obFocus = 25;
+$$("#obFocus button").forEach(b => b.addEventListener("click", () => { obFocus = +b.dataset.v; $$("#obFocus button").forEach(x => x.setAttribute("aria-pressed", x === b)); }));
+$("#obForm").addEventListener("submit", e => {
+  e.preventDefault();
+  S.settings.focus = obFocus; $("#s-focus").value = obFocus;
+  setCorner(obCorner);
+  const v = $("#obTask").value; let t = null;
+  if (v.trim()) { t = quickAdd(v, true); if (t) { setCurrent(t.id); $("#obTask").value = ""; } }
+  if (S.timer.phase === "idle") S.timer.next = "focus";
+  render();
+  W.classList.remove("open");
+  $("#widget").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" });
+  toast(t ? `C'est parti : ${t.title} · ${t.size}` : "Réglages appliqués.");
+});
+
+/* états statiques */
+$$("[data-empty-heat]").forEach(el => { el.innerHTML = Array.from({ length: 84 }, (_, i) => `<i${i === 80 ? ' class="today"' : ""}></i>`).join(""); });
+
+/* toast */
+let toastT;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600); }
+
+/* boucle : 4 Hz suffit, aucune animation JS continue */
+render();
+setInterval(() => { renderTimer(); if (Date.now() - lastMapAt > 30000) { lastMapAt = Date.now(); const m = dayMap(); renderHeat(m); } }, 250);
+})();
+</script>
