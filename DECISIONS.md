@@ -155,3 +155,33 @@ Retour Phase 1 : pas assez de pétales, et une série de tâches cochées doit s
 
 ### D-020 · Réinitialiser = icône
 Bouton icône (flèche circulaire) avec `aria-label` et infobulle « Réinitialiser ».
+
+### D-021 · Ouverture du widget : 300 ms, curseur immobile
+Choisi après test du prototype. Le widget ne se déploie que si le curseur reste immobile 300 ms sur la forme compacte ; tout mouvement relance le délai. Remplace les 150 ms du brief. Repli inchangé (600 ms, sauf champ texte actif).
+
+---
+
+## Phase 2 — Socle
+
+### D-022 · Accès disque par 6 commandes Rust, pas par `plugin-fs`
+- **Contexte** : `tauri-plugin-fs` demande de déclarer des portées de chemins ; l'emplacement des données est modifiable (iCloud Drive ou n'importe quel dossier), ce qui oblige à ouvrir large.
+- **Décision** : `src-tauri/src/store.rs` expose `fs_read_text`, `fs_write_atomic`, `fs_list_dir`, `fs_remove`, `fs_mkdirp`, `fs_mtime` (+ `default_data_dir`). Chemins absolus uniquement ; écriture et suppression limitées aux `.json`.
+- **Écriture atomique** : fichier temporaire → `fsync` → `rename` → `fsync` du dossier. Une fermeture forcée laisse l'ancien fichier ou le nouveau, jamais un mélange.
+- La logique (sauvegardes, validation, garde D-014) reste en TypeScript derrière une interface `FsAdapter`, testée avec un disque en mémoire.
+
+### D-023 · Minuteur : instants en millisecondes epoch
+- `TimerState` stocke `startedAt` / `pausedAt` en ms epoch (pas en ISO comme le prévoyait D-005) : ce sont des instants de calcul, jamais affichés ni regroupés par jour. Les tâches et sessions gardent l'ISO local (D-007).
+- Cycle : une pause longue (terminée ou passée) remet le compteur de focus à 0. « Réinitialiser » garde la position dans le cycle.
+- « Passer » à l'arrêt ne fait rien.
+
+### D-024 · Sauvegardes : copie de la veille, avant la première écriture du jour
+- La sauvegarde du jour contient l'état **avant** les modifications du jour : si le fichier est abîmé dans la journée, on récupère au pire la fin de la veille.
+- Seul un fichier lisible est sauvegardé. 7 sauvegardes gardées dans `backups/`.
+
+### D-025 · Outillage
+- React 18 (brief) ; Vitest 5 (la 3 a une faille modérée connue, GHSA-82fw-gwwq-j7x9).
+- Tests en fuseau fixe `Europe/Paris` pour que les tests de dates ne dépendent pas de la machine.
+- Signature **ad hoc** (`signingIdentity: "-"`) : obligatoire pour qu'un binaire Apple Silicon se lance ; ne remplace pas une signature Developer ID (Gatekeeper → README Phase 6).
+- CI : tests front + Rust sur Linux à chaque PR ; `.dmg` universel sur macOS à chaque PR, sur `main` et sur les tags `v*` (publié en Release).
+- Icône provisoire générée depuis l'ensō du prototype ; la vraie arrive en Phase 6.
+- Identifiant d'app : `dev.sakura.pomodoro`.
