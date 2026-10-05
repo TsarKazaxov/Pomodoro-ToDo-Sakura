@@ -134,3 +134,24 @@ Le reste passe : `--ink` 13,2 (clair) / 14,0 (sombre), `--ink-muted` sombre 5,6,
 
 ### D-018 · Vocabulaire
 - **Pause** = la pause du Pomodoro (courte/longue). **Suspendu** = le minuteur arrêté par l'utilisateur. Les deux mots ne doivent jamais se croiser à l'écran.
+
+### D-019 · Récompense graduelle (remplace « 8 à 12 pétales » du brief)
+Retour Phase 1 : pas assez de pétales, et une série de tâches cochées doit se sentir.
+- **Série** : chaque tâche cochée moins de 10 min après la précédente fait monter d'un palier. Au-delà de 10 min, on repart à 1. Recocher une tâche déjà comptée ne fait pas monter la série.
+
+| Palier | Pétales | Son | En plus |
+|---|---|---|---|
+| 1 | 16 + 2 × points de la tâche | 1 coup de bol | — |
+| 2 | 28 + 2 × pts, plus larges que le widget | 2 coups montants | badge « Série ×2 », le chiffre du jour pulse |
+| 3 | 40 + 2 × pts, coup de vent latéral | 3 coups | l'ensō rosit 1 s |
+| 4 et + | 64 + 2 × pts, pluie sur **tout l'écran** | 4 coups | idem |
+| Fin de focus | 24 | 2 coups | — |
+
+- Les points pondèrent les pétales : une XL cochée donne plus qu'une XS, cohérent avec la heatmap.
+- Plafond : 80 pétales, animés en CSS uniquement (`transform` + `opacity`) ; rien ne tourne entre deux récompenses.
+- Mouvement réduit : aucun pétale ; le son et le badge « Série ×N » restent.
+- **Coût technique du palier 4** : dans l'app, le widget est une petite fenêtre. Une pluie sur tout l'écran demande une fenêtre transparente plein écran, temporaire, qui laisse passer les clics (`set_ignore_cursor_events`), affichée ~4 s. Faisable en Tauri, à valider en Phase 3.
+- Risque assumé : cocher d'un coup des tâches faites plus tôt déclenche aussi la série.
+
+### D-020 · Réinitialiser = icône
+Bouton icône (flèche circulaire) avec `aria-label` et infobulle « Réinitialiser ».
