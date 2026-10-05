@@ -10,7 +10,7 @@ export default defineConfig({
   build: { target: "safari14", sourcemap: false },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
     // Fuseau fixe : les tests de dates ne dépendent pas de la machine qui les lance.
     env: { TZ: "Europe/Paris" },
   },

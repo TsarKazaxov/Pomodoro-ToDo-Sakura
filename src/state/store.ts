@@ -25,7 +25,8 @@ export interface Snapshot {
 
 export type Reward =
   | { kind: "task"; tier: number; points: number; origin: string }
-  | { kind: "focus"; breakMinutes: number; taskTitle?: string };
+  | { kind: "focus"; breakMinutes: number; taskTitle?: string }
+  | { kind: "break" };
 
 /** Messages entre fenêtres. En production : événements Tauri (src/state/tauriTransport.ts). */
 export interface Transport {
@@ -188,6 +189,7 @@ function handleEffects(effects: Effect[], origin: string, data: DataFile) {
         : { kind: "focus", breakMinutes: e.breakMinutes };
       if (data.settings.soundEnabled) ctx.hooks.playChime?.(2, data.settings.soundVolume);
     } else if (e.kind === "breakDone") {
+      reward = { kind: "break" };
       if (data.settings.soundEnabled) ctx.hooks.playChime?.(1, 0.5 * data.settings.soundVolume);
     }
     if (reward) {

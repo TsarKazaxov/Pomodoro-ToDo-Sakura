@@ -22,3 +22,5 @@ Idées notées, **non codées**. Re-priorisation après les 5 jours d'usage du c
 - **Seuils de heatmap par quartiles** : déjà prévu V1 après 30 jours ; une version « par semaine glissante » pourrait mieux suivre les changements de rythme.
 - **Interface en anglais / japonais** (les chaînes sont centralisées, D-004).
 - **Historique de calibration** : évolution du ratio par taille dans le temps (est-ce que je m'améliore ?).
+- **Vrai son de bol enregistré** (fichier libre de droits) à la place du bol synthétisé (D-034).
+- **Raccourcis personnalisables** dans les Réglages.

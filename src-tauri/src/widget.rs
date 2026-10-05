@@ -1,6 +1,6 @@
 //! Fenêtre widget : ancrage au coin de l'écran, redimensionnement, pluie de pétales (D-026, D-027).
 
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
 use tauri::{
@@ -104,6 +104,14 @@ pub fn hide_main(app: AppHandle) -> Result<(), String> {
     }
 }
 
+static QUITTING: AtomicBool = AtomicBool::new(false);
+pub fn quitting() -> bool {
+    QUITTING.load(Ordering::Relaxed)
+}
+pub fn set_quitting() {
+    QUITTING.store(true, Ordering::Relaxed);
+}
+
 static RAIN_SEQ: AtomicU32 = AtomicU32::new(0);
 const RAIN_LIFETIME: Duration = Duration::from_millis(5_500);
 
@@ -144,6 +152,8 @@ pub fn petal_rain(app: AppHandle, mode: String) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     win.set_ignore_cursor_events(true)
         .map_err(|e| e.to_string())?;
+    #[cfg(target_os = "macos")]
+    crate::macos::float_everywhere(&win);
     std::thread::spawn(move || {
         std::thread::sleep(RAIN_LIFETIME);
         let _ = win.close();

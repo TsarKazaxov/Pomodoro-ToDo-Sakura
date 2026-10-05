@@ -1,12 +1,24 @@
+#[cfg(target_os = "macos")]
+mod macos;
+mod shortcuts;
 mod store;
+mod tray;
 mod widget;
 
 use tauri::{Manager, WindowEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(feature = "notifications")]
+    let builder = builder.plugin(tauri_plugin_notification::init());
+    builder
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
+        .plugin(shortcuts::plugin())
         .invoke_handler(tauri::generate_handler![
             store::fs_read_text,
             store::fs_write_atomic,
@@ -20,6 +32,8 @@ pub fn run() {
             widget::show_main,
             widget::hide_main,
             widget::petal_rain,
+            tray::tray_update,
+            tray::quit_app,
         ])
         .on_window_event(|window, event| {
             // Fermer la vue complète la cache : le widget, propriétaire des données, continue.
@@ -31,12 +45,28 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            // Le widget n'apparaît qu'une fois placé dans son coin par l'interface.
+            // Mode accessoire : pas d'icône dans le Dock, l'app vit dans la barre de menu.
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             if let Some(w) = app.get_webview_window("widget") {
                 let _ = w.set_always_on_top(true);
+                #[cfg(target_os = "macos")]
+                macos::float_everywhere(&w);
             }
+            tray::create(app.handle())?;
+            shortcuts::register_all(app.handle());
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("échec du lancement de Sakura");
+        .build(tauri::generate_context!())
+        .expect("échec du lancement de Sakura")
+        .run(|app, event| {
+            // ⌘Q depuis la vue complète : on passe par le même chemin que « Quitter ».
+            if let tauri::RunEvent::ExitRequested { api, code, .. } = event {
+                if code.is_none() && !widget::quitting() {
+                    api.prevent_exit();
+                    widget::set_quitting();
+                    tray::request_quit(app);
+                }
+            }
+        });
 }

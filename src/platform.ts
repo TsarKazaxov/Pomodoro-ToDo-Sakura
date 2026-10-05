@@ -2,6 +2,17 @@
 // sans effet pour que l'interface reste utilisable.
 
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import {
+  disable as disableAutostart,
+  enable as enableAutostart,
+  isEnabled as autostartEnabled,
+} from "@tauri-apps/plugin-autostart";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
 import type { Corner } from "./core/types";
 
@@ -66,4 +77,40 @@ export async function infoDialog(text: string, kind: "info" | "error" = "info"):
     return;
   }
   await message(text, { title: "Sakura", kind });
+}
+
+// ---------- barre de menu, raccourcis, notifications, démarrage (Phase 5) ----------
+
+/** Événement envoyé par Rust (barre de menu, raccourci global). Renvoie la désinscription. */
+export function onAppEvent(name: "toggle" | "quick-add" | "quit", cb: () => void): () => void {
+  if (!inTauri) return () => {};
+  const p = listen(`sakura://${name}`, cb);
+  return () => void p.then((un) => un());
+}
+
+export const trayUpdate = (title: string, toggleLabel: string, running: boolean) =>
+  call("tray_update", { title, toggleLabel, running });
+export const quitApp = () => call("quit_app");
+
+let notifyAllowed: boolean | null = null;
+export async function notify(title: string, body: string) {
+  if (!inTauri) return;
+  try {
+    notifyAllowed ??= (await isPermissionGranted()) || (await requestPermission()) === "granted";
+    if (notifyAllowed) sendNotification({ title, body });
+  } catch (e) {
+    console.error("notification", e);
+  }
+}
+
+/** Aligne l'ouverture au démarrage du Mac sur le réglage (app installée seulement). */
+export async function syncAutostart(enabled: boolean) {
+  if (!inTauri || import.meta.env.DEV) return;
+  try {
+    if ((await autostartEnabled()) === enabled) return;
+    if (enabled) await enableAutostart();
+    else await disableAutostart();
+  } catch (e) {
+    console.error("autostart", e);
+  }
 }

@@ -8,8 +8,16 @@ import { dayKeyAt } from "../core/time";
 import { durationsFrom, isPaused, progress, remainingMs } from "../core/timer";
 import type { DataFile } from "../core/types";
 import { fr } from "../i18n/fr";
-import { showMain, widgetLayout } from "../platform";
-import { onReward, useSakura, type Reward } from "../state/store";
+import {
+  notify,
+  onAppEvent,
+  quitApp,
+  showMain,
+  syncAutostart,
+  trayUpdate,
+  widgetLayout,
+} from "../platform";
+import { flush, onReward, useSakura, type Reward } from "../state/store";
 import { Enso } from "../ui/Enso";
 import { formatClock } from "../ui/format";
 import { Heatmap } from "../ui/Heatmap";
@@ -60,7 +68,9 @@ function WidgetReady({ data }: { data: DataFile }) {
   const combo = useSakura((s) => s.combo);
   const now = useNow();
   const card = useRef<HTMLDivElement>(null);
-  const { open, handlers } = useHoverExpand(card);
+  const { open, setOpen, handlers } = useHoverExpand(card);
+  const quickInput = useRef<HTMLInputElement>(null);
+  const focusQuickAdd = useRef(false);
   const [expandedFrame, setExpandedFrame] = useState(false);
   const [pending, setPending] = useState(false);
   const [bloom, setBloom] = useState(false);
@@ -104,12 +114,48 @@ function WidgetReady({ data }: { data: DataFile }) {
     return () => window.clearTimeout(t);
   }, [expandedFrame, pending]);
 
+  // Barre de menu, raccourcis globaux et fermeture de l'app (Phase 5).
+  useEffect(() => {
+    const offs = [
+      onAppEvent("toggle", () => dispatch({ type: "timer/toggle" })),
+      onAppEvent("quick-add", () => {
+        focusQuickAdd.current = true;
+        setOpen(true);
+      }),
+      onAppEvent("quit", () => void flush().finally(() => void quitApp())),
+    ];
+    return () => offs.forEach((off) => off());
+  }, [dispatch, setOpen]);
+
+  // ⌥⌘N : le curseur va dans le champ d'ajout une fois le widget déployé.
+  useEffect(() => {
+    if (expandedFrame && focusQuickAdd.current) {
+      focusQuickAdd.current = false;
+      quickInput.current?.focus();
+    }
+  }, [expandedFrame]);
+
+  useEffect(() => {
+    void syncAutostart(data.settings.launchAtLogin);
+  }, [data.settings.launchAtLogin]);
+
   useEffect(
     () =>
       onReward((r: Reward) => {
         if (r.kind === "focus") {
           if (openRef.current) petalsInCard(24);
-          else setPending(true);
+          else {
+            setPending(true);
+            void notify(
+              "Focus terminé",
+              `${r.taskTitle ? `« ${r.taskTitle} » · ` : ""}La pause de ${r.breakMinutes} min commence.`,
+            );
+          }
+          return;
+        }
+        if (r.kind === "break") {
+          if (!openRef.current)
+            void notify("Pause terminée", "Lance le focus suivant quand tu es prêt.");
           return;
         }
         if (r.origin !== "widget") return;
@@ -171,7 +217,13 @@ function WidgetReady({ data }: { data: DataFile }) {
               ? data.settings.longBreakMinutes
               : data.settings.shortBreakMinutes,
           );
+  const running = t.phase !== "idle" && !paused;
+  const trayTitle = t.phase === "idle" ? "" : paused ? `‖ ${time}` : time;
+  const toggleLabel = t.phase === "idle" ? fr.start : paused ? fr.resume : fr.suspend;
   const taskLine = cur ? cur.title : t.phase === "focus" ? fr.freeFocusRunning : fr.pickTask;
+  useEffect(() => {
+    void trayUpdate(trayTitle, toggleLabel, running);
+  }, [trayTitle, toggleLabel, running]);
   const enso = (
     <Enso progress={progress(t, d, now)} tone={isBreak ? "sakura" : "ink"} bloom={bloom} />
   );
@@ -302,6 +354,7 @@ function WidgetReady({ data }: { data: DataFile }) {
             </ul>
           )}
           <input
+            ref={quickInput}
             className={styles.quick}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

@@ -236,3 +236,28 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - Filtre par défaut des tâches : « Ouvertes » (à faire + en cours). Le brief ne précisait pas ; c'est la vue de travail.
 - Premier lancement : la première tâche est épinglée et devient la tâche en cours.
 - Données de démonstration en développement uniquement : `npm run dev` puis `/?view=widget&seed=1` (et `&load=1000` pour 1 000 tâches de plus).
+
+---
+
+## Phase 5 — Intégration macOS
+
+### D-032 · Natif macOS (`src-tauri/src/macos.rs`)
+- **Mode accessoire** : pas d'icône dans le Dock ; l'app vit dans la barre de menu. Le menu d'édition par défaut reste installé (copier-coller dans les champs).
+- **Partout, même en plein écran** : comportement de fenêtre `CanJoinAllSpaces | FullScreenAuxiliary | Stationary | IgnoresCycle` sur le widget et la pluie de pétales.
+- **App Nap** : désactivé uniquement pendant qu'une phase tourne (`beginActivityWithOptions`, veille du Mac toujours permise). Le son de fin arrive à l'heure ; au repos, l'app peut être mise en sommeil par macOS.
+- Vérification : le code macOS est compilé et passé à clippy depuis Linux (`cargo clippy --target aarch64-apple-darwin --no-default-features`, `CC=clang`), puis construit pour de vrai par la CI macOS. Les notifications sont derrière l'option `notifications` (activée par défaut) car leur crate exige les en-têtes Cocoa.
+
+### D-033 · Barre de menu, raccourcis, fermeture
+- Barre de menu : ensō monochrome (image « template », s'adapte au thème), temps restant en titre (`‖ 18:42` si suspendu, rien à l'arrêt), menu Démarrer/Suspendre/Reprendre, Ouvrir Sakura, Quitter Sakura.
+- Raccourcis globaux enregistrés côté Rust : ⌥⌘P démarrer/suspendre, ⌥⌘N déploie le widget et place le curseur dans l'ajout rapide, ⌥⌘S ouvre la vue complète. Un raccourci déjà pris par une autre app est ignoré sans bloquer le démarrage.
+- Quitter (menu ou ⌘Q) : le widget écrit d'abord les modifications en attente, puis l'app se ferme (au plus tard 1,5 s après).
+- `positioner` du brief non utilisé : l'ancrage maison (D-028) gère la zone utile de l'écran et les quatre coins.
+
+### D-034 · Notifications, démarrage, son
+- Notification macOS en fin de focus et en fin de pause **si le widget est replié** (sinon les pétales suffisent). Permission demandée à la première notification.
+- « Lancer au démarrage » : LaunchAgent via `tauri-plugin-autostart`, aligné sur le réglage à chaque changement (app installée uniquement, pas en développement).
+- Son : bol synthétisé (WebAudio) plutôt qu'un enregistrement, faute de fichier libre de droits vérifié. Remplaçable par un `.mp3` dans une version suivante (BACKLOG).
+
+### D-035 · Synchronisation : testée à deux instances sur le vrai disque
+- `tests/twoMacs.test.ts` : deux `DataStore` sur un même dossier réel. B voit les écritures de A ; A refuse d'écraser la version de B avant relecture ; un fichier remplacé par iCloud avec une date plus ancienne est détecté (comparaison d'égalité de la date, pas « plus récent que »).
+- Le widget vérifie la date du fichier toutes les 5 s et relit si elle a changé et que rien n'est en attente d'écriture.

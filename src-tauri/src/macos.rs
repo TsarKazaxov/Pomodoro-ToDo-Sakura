@@ -1,0 +1,56 @@
+//! Réglages natifs macOS (D-032). Compilé uniquement pour macOS.
+
+use std::cell::RefCell;
+
+use objc2::rc::Retained;
+use objc2::runtime::{NSObjectProtocol, ProtocolObject};
+use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+use objc2_foundation::{NSActivityOptions, NSProcessInfo, NSString};
+use tauri::WebviewWindow;
+
+/// Le widget et la pluie de pétales suivent l'utilisateur sur tous les bureaux, y compris
+/// par-dessus une app en plein écran, et restent hors du cycle ⌘` des fenêtres.
+pub fn float_everywhere(window: &WebviewWindow) {
+    let Ok(ptr) = window.ns_window() else {
+        return;
+    };
+    // SAFETY : Tauri renvoie le NSWindow de cette fenêtre ; appelé sur le fil principal.
+    let ns: &NSWindow = unsafe { &*ptr.cast::<NSWindow>() };
+    ns.setCollectionBehavior(
+        ns.collectionBehavior()
+            | NSWindowCollectionBehavior::CanJoinAllSpaces
+            | NSWindowCollectionBehavior::FullScreenAuxiliary
+            | NSWindowCollectionBehavior::Stationary
+            | NSWindowCollectionBehavior::IgnoresCycle,
+    );
+}
+
+thread_local! {
+    static ACTIVITY: RefCell<Option<Retained<ProtocolObject<dyn NSObjectProtocol>>>> =
+        const { RefCell::new(None) };
+}
+
+/// Empêche App Nap de ralentir le minuteur pendant une phase en cours ; la mise en veille
+/// du Mac reste permise (le minuteur se recale tout seul au réveil). Fil principal uniquement.
+pub fn keep_timer_awake(active: bool) {
+    ACTIVITY.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        let info = NSProcessInfo::processInfo();
+        match (active, slot.is_some()) {
+            (true, false) => {
+                let reason = NSString::from_str("Minuteur Pomodoro en cours");
+                *slot = Some(info.beginActivityWithOptions_reason(
+                    NSActivityOptions::UserInitiatedAllowingIdleSystemSleep,
+                    &reason,
+                ));
+            }
+            (false, true) => {
+                if let Some(activity) = slot.take() {
+                    // SAFETY : `activity` vient de beginActivityWithOptions et n'a pas été terminée.
+                    unsafe { info.endActivity(&activity) };
+                }
+            }
+            _ => {}
+        }
+    });
+}
