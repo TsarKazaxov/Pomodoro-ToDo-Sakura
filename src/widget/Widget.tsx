@@ -1,12 +1,12 @@
 // États A (compact) et B (déployé) de la fenêtre widget (brief §4).
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { comboVisible } from "../core/combo";
 import { shouldSplit } from "../core/stats";
 import { currentTask, priorities } from "../core/tasks";
 import { dayKeyAt } from "../core/time";
 import { durationsFrom, isPaused, progress, remainingMs } from "../core/timer";
-import type { DataFile } from "../core/types";
+import type { DataFile, Settings } from "../core/types";
 import { fr } from "../i18n/fr";
 import {
   notify,
@@ -17,6 +17,9 @@ import {
   trayUpdate,
   widgetLayout,
   setFollowScreen,
+  onWidgetMoved,
+  startWidgetDrag,
+  widgetSnap,
 } from "../platform";
 import { flush, onReward, useSakura, type Reward } from "../state/store";
 import { Enso } from "../ui/Enso";
@@ -69,7 +72,7 @@ function WidgetReady({ data }: { data: DataFile }) {
   const combo = useSakura((s) => s.combo);
   const now = useNow();
   const card = useRef<HTMLDivElement>(null);
-  const { open, setOpen, handlers } = useHoverExpand(card);
+  const { open, setOpen, handlers, collapse, suspend } = useHoverExpand(card);
   const quickInput = useRef<HTMLInputElement>(null);
   const focusQuickAdd = useRef(false);
   const [expandedFrame, setExpandedFrame] = useState(false);
@@ -106,6 +109,48 @@ function WidgetReady({ data }: { data: DataFile }) {
       window.clearTimeout(t);
     };
   }, [open, corner]);
+
+  // Glisser le widget replié vers un autre coin ou un autre écran (D-040). Au lâcher (plus de
+  // déplacement depuis 350 ms), il s'aimante au coin le plus proche ; posé sur un autre écran,
+  // il y reste : le suivi de l'écran du curseur est coupé.
+  const dragging = useRef(false);
+  const dragMoved = useRef(false);
+  const dragEnd = useRef<number | undefined>(undefined);
+  const finishDrag = useCallback(async () => {
+    dragging.current = false;
+    const snap = await widgetSnap();
+    suspend(false);
+    if (!snap) return;
+    const patch: Partial<Settings> = { corner: snap.corner };
+    if (snap.movedScreen) patch.followCursorScreen = false;
+    dispatch({ type: "settings/update", patch });
+  }, [dispatch, suspend]);
+  useEffect(
+    () =>
+      onWidgetMoved(() => {
+        if (!dragging.current) return;
+        dragMoved.current = true;
+        window.clearTimeout(dragEnd.current);
+        dragEnd.current = window.setTimeout(() => void finishDrag(), 350);
+      }),
+    [finishDrag],
+  );
+  const beginDrag = (e: React.MouseEvent) => {
+    if (open || e.button !== 0) return;
+    e.preventDefault();
+    dragging.current = true;
+    dragMoved.current = false;
+    suspend(true);
+    void startWidgetDrag().then(() =>
+      window.setTimeout(() => {
+        // Simple clic sans déplacement : on rend la main au survol.
+        if (dragging.current && !dragMoved.current) {
+          dragging.current = false;
+          suspend(false);
+        }
+      }, 400),
+    );
+  };
 
   // Pétales en attente (fin de focus pendant que le widget était replié) : au prochain déploiement.
   useEffect(() => {
@@ -247,7 +292,12 @@ function WidgetReady({ data }: { data: DataFile }) {
     >
       {pending && <span className={styles.pending} aria-label="Focus terminé" />}
 
-      <div className={styles.compact} aria-hidden={open}>
+      <div
+        className={styles.compact}
+        aria-hidden={open}
+        onMouseDown={beginDrag}
+        title="Glisser pour déplacer le widget"
+      >
         <div className={styles.miniEnso}>{enso}</div>
         <div className={styles.compactText}>
           <div className={styles.time}>{time}</div>
@@ -260,6 +310,23 @@ function WidgetReady({ data }: { data: DataFile }) {
           que la ligne compacte chaque seconde (D-036). */}
       {open && (
         <div className={styles.expanded} aria-hidden={!open}>
+          <button
+            className={styles.collapse}
+            onClick={collapse}
+            aria-label="Réduire"
+            title="Réduire (Échap)"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M4 8h8" />
+            </svg>
+          </button>
           <div className={styles.timer}>
             <div className={styles.bigEnso}>
               {enso}

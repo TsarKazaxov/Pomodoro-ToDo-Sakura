@@ -58,6 +58,9 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Curseur immobile 0,3 s dessus → il se déploie, **même si une autre app est active** (Figma au premier plan). Si non : risque D-028, à signaler.
 - [ ] Passer le curseur dessus sans s'arrêter → il ne s'ouvre pas.
 - [ ] Il se replie 0,6 s après la sortie, sauf si tu tapes dans l'ajout rapide.
+- [ ] Choisir une tâche dans le menu « Tâche en cours » puis sortir le curseur → il se replie (V1.0.2).
+- [ ] Échap ou le bouton « – » en haut à droite → il se replie aussitôt (V1.0.2).
+- [ ] **Glisser la forme compacte** vers un autre coin → il s'y aimante ; vers l'autre écran → il y reste (V1.0.2).
 - [ ] Un clic sur « Démarrer » agit du premier coup, même quand Sakura n'est pas l'app active.
 - [ ] Cocher 4 priorités en moins de 10 min : pétales, puis pluie sur tout l'écran au 4ᵉ ; les clics passent à travers la pluie.
 

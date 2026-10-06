@@ -33,6 +33,8 @@ pub fn run() {
             widget::hide_main,
             widget::petal_rain,
             widget::set_follow_screen,
+            widget::widget_drag_start,
+            widget::widget_snap,
             tray::tray_update,
             tray::quit_app,
         ])

@@ -64,6 +64,71 @@ fn monitor_of(window: &WebviewWindow) -> Option<Monitor> {
         .or_else(|| window.primary_monitor().ok().flatten())
 }
 
+/// Coin de `area` le plus proche du point (centre du widget lâché).
+pub fn nearest_corner(center: (f64, f64), area: Rect) -> &'static str {
+    let left = center.0 < area.x + area.w / 2.0;
+    let top = center.1 < area.y + area.h / 2.0;
+    match (top, left) {
+        (true, true) => "top-left",
+        (true, false) => "top-right",
+        (false, true) => "bottom-left",
+        (false, false) => "bottom-right",
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Snap {
+    corner: &'static str,
+    /// Lâché sur un autre écran que celui de départ.
+    moved_screen: bool,
+}
+
+/// Écran du widget avant le glisser (position physique du coin haut-gauche de l'écran).
+static DRAG_FROM: Mutex<Option<(i32, i32)>> = Mutex::new(None);
+
+/// Début d'un glisser : mémorise l'écran de départ (D-040).
+#[tauri::command]
+pub fn widget_drag_start(window: WebviewWindow) {
+    let from = monitor_of(&window).map(|m| (m.position().x, m.position().y));
+    if let Ok(mut d) = DRAG_FROM.lock() {
+        *d = from;
+    }
+}
+
+/// Fin d'un glisser : aimante le widget au coin le plus proche de l'écran où il a été lâché.
+#[tauri::command]
+pub fn widget_snap(window: WebviewWindow) -> Result<Snap, String> {
+    let monitor = monitor_of(&window).ok_or("aucun écran détecté")?;
+    let area = logical_work_area(&monitor);
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    let pos = window.outer_position().map_err(|e| e.to_string())?;
+    let size = window.outer_size().map_err(|e| e.to_string())?;
+    let (w, h) = (size.width as f64 / scale, size.height as f64 / scale);
+    let center = (
+        pos.x as f64 / scale + w / 2.0,
+        pos.y as f64 / scale + h / 2.0,
+    );
+    let corner = nearest_corner(center, area);
+    let (x, y) = anchored_origin(corner, area, w, h);
+    window
+        .set_position(LogicalPosition::new(x, y))
+        .map_err(|e| e.to_string())?;
+    if let Ok(mut c) = CORNER.lock() {
+        *c = corner.to_string();
+    }
+    let here = (monitor.position().x, monitor.position().y);
+    let moved_screen = DRAG_FROM
+        .lock()
+        .ok()
+        .and_then(|mut d| d.take())
+        .is_some_and(|from| from != here);
+    Ok(Snap {
+        corner,
+        moved_screen,
+    })
+}
+
 /// Place et dimensionne le widget dans son coin, puis l'affiche.
 #[tauri::command]
 pub fn widget_layout(
@@ -315,6 +380,16 @@ mod tests {
             anchored_origin("?", AREA, 10.0, 10.0),
             anchored_origin("top-right", AREA, 10.0, 10.0)
         );
+    }
+
+    #[test]
+    fn aimantation_au_coin_le_plus_proche() {
+        assert_eq!(nearest_corner((100.0, 100.0), AREA), "top-left");
+        assert_eq!(nearest_corner((1400.0, 60.0), AREA), "top-right");
+        assert_eq!(nearest_corner((80.0, 850.0), AREA), "bottom-left");
+        assert_eq!(nearest_corner((1300.0, 700.0), AREA), "bottom-right");
+        // Milieu exact : à droite et en bas (choix arbitraire mais stable).
+        assert_eq!(nearest_corner((720.0, 462.5), AREA), "bottom-right");
     }
 
     #[test]

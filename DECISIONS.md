@@ -287,3 +287,19 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - **Deuxième écran** : le widget suit l'écran où se trouve le curseur, au même coin. Le curseur doit y rester ≈ 1,2 s (3 relevés à 400 ms) : traverser un écran pour atteindre l'autre ne le déplace pas. Réglage « Avec plusieurs écrans, suivre l'écran du curseur », activé par défaut. Rien ne tourne avec un seul écran.
 - **Stage Manager** : comportement de fenêtre `CanJoinAllApplications` (macOS 13+, fait pour ce cas) ; niveau de fenêtre « status » (au-dessus des palettes flottantes des autres apps) ; ne se cache jamais à la désactivation. Le comportement est désormais posé en entier (et non ajouté à l'existant) car certaines options sont exclusives entre elles.
 - Non retenu pour l'instant : convertir le widget en `NSPanel` (seule façon connue d'apparaître par-dessus une app en plein écran sur certains macOS). La conversion de classe à chaud est fragile ; à faire seulement si le plein écran pose problème.
+
+---
+
+## V1.0.2 — Widget bloqué en grand, widget déplaçable
+
+### D-039 · Repli du widget : seule la saisie le retient
+- **Constat** (test réel) : après avoir choisi une tâche dans le menu « Tâche en cours », le widget restait déployé. Le menu gardait le focus, ce qui comptait comme « saisie en cours ».
+- Seuls un champ texte ou une zone de texte retiennent l'ouverture, et seulement si la fenêtre a le focus. Un clic dans une autre app retire le focus et replie le widget.
+- Sortie rapide du curseur hors de la fenêtre : prise en compte même sans « mouseleave » sur la carte.
+- Repli immédiat : touche Échap ou bouton « Réduire » (icône moins, en haut à droite). Si le curseur est encore sur la carte, le widget ne se rouvre qu'après que le curseur en est sorti.
+
+### D-040 · Déplacer le widget par cliquer-glisser
+- La forme compacte se glisse avec la souris (curseur « main »). Le survol est suspendu pendant le glisser : le widget ne se déploie pas sous le doigt.
+- Au lâcher (350 ms sans mouvement), il s'aimante au coin le plus proche de l'écran où il est posé ; ce coin devient le réglage « coin ».
+- Lâché sur un autre écran : « suivre l'écran du curseur » (D-038) est désactivé, sinon le widget repartirait aussitôt. Le réglage reste réactivable.
+- Pas de position libre : un widget entre deux coins se déploierait hors de l'écran. L'aimantation garde la règle « il grandit vers l'intérieur ».

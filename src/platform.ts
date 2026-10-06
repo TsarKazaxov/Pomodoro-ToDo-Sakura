@@ -117,3 +117,33 @@ export async function syncAutostart(enabled: boolean) {
 
 /** Avec plusieurs écrans, le widget suit l'écran du curseur (D-038). */
 export const setFollowScreen = (enabled: boolean) => call("set_follow_screen", { enabled });
+
+// ---------- déplacer le widget (D-040) ----------
+
+/** Lance le glisser natif de la fenêtre widget (bouton de la souris enfoncé). */
+export async function startWidgetDrag(): Promise<void> {
+  if (!inTauri) return;
+  await call("widget_drag_start");
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  await getCurrentWindow()
+    .startDragging()
+    .catch((e) => console.error("startDragging", e));
+}
+
+/** Appelé à chaque déplacement de la fenêtre widget. Renvoie la désinscription. */
+export function onWidgetMoved(cb: () => void): () => void {
+  if (!inTauri) return () => {};
+  const p = import("@tauri-apps/api/window").then(({ getCurrentWindow }) =>
+    getCurrentWindow().onMoved(cb),
+  );
+  return () => void p.then((un) => un());
+}
+
+/** Aimante le widget au coin le plus proche de l'écran où il a été lâché. */
+export async function widgetSnap(): Promise<{ corner: Corner; movedScreen: boolean } | null> {
+  if (!inTauri) return null;
+  return invoke<{ corner: Corner; movedScreen: boolean }>("widget_snap").catch((e) => {
+    console.error("widget_snap", e);
+    return null;
+  });
+}

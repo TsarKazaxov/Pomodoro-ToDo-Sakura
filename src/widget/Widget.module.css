@@ -449,3 +449,34 @@
   font-size: 13px;
   cursor: pointer;
 }
+
+/* ---------- déplacer, réduire (D-039, D-040) ---------- */
+.compact {
+  cursor: grab;
+}
+.compact:active {
+  cursor: grabbing;
+}
+.collapse {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.collapse:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.collapse svg {
+  width: 14px;
+  height: 14px;
+}
