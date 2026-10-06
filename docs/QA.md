@@ -52,6 +52,8 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 
 **Widget**
 - [ ] Le widget est visible sur tous les bureaux (change de bureau avec ⌃→).
+- [ ] **Deux écrans** : garde le curseur ~1 s sur l'autre écran → le widget le rejoint, au même coin (V1.0.1).
+- [ ] **Stage Manager** activé : passe d'une app à l'autre → le widget reste visible (V1.0.1).
 - [ ] Il reste visible **par-dessus une app en plein écran** (Safari en plein écran, par exemple).
 - [ ] Curseur immobile 0,3 s dessus → il se déploie, **même si une autre app est active** (Figma au premier plan). Si non : risque D-028, à signaler.
 - [ ] Passer le curseur dessus sans s'arrêter → il ne s'ouvre pas.

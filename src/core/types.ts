@@ -64,6 +64,8 @@ export interface Settings {
   soundVolume: number;
   theme: Theme;
   launchAtLogin: boolean;
+  /** Avec plusieurs écrans, le widget rejoint l'écran du curseur (D-038). */
+  followCursorScreen: boolean;
   /** Premier lancement terminé. */
   onboarded: boolean;
 }

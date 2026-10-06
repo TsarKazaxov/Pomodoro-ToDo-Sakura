@@ -32,6 +32,7 @@ pub fn run() {
             widget::show_main,
             widget::hide_main,
             widget::petal_rain,
+            widget::set_follow_screen,
             tray::tray_update,
             tray::quit_app,
         ])
@@ -45,6 +46,7 @@ pub fn run() {
                 macos::float_everywhere(&w);
             }
             tray::create(app.handle())?;
+            widget::start_follow(app.handle().clone());
             shortcuts::register_all(app.handle());
             Ok(())
         })

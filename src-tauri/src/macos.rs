@@ -4,25 +4,31 @@ use std::cell::RefCell;
 
 use objc2::rc::Retained;
 use objc2::runtime::{NSObjectProtocol, ProtocolObject};
-use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+use objc2_app_kit::{NSStatusWindowLevel, NSWindow, NSWindowCollectionBehavior};
 use objc2_foundation::{NSActivityOptions, NSProcessInfo, NSString};
 use tauri::WebviewWindow;
 
-/// Le widget et la pluie de pétales suivent l'utilisateur sur tous les bureaux, y compris
-/// par-dessus une app en plein écran, et restent hors du cycle ⌘` des fenêtres.
+/// Le widget et la pluie de pétales suivent l'utilisateur partout (D-032, D-038) :
+/// - sur tous les bureaux et par-dessus une app en plein écran ;
+/// - avec toutes les apps dans Stage Manager (`CanJoinAllApplications`, macOS 13+, ignoré avant) ;
+/// - au-dessus des palettes flottantes des autres apps (niveau « status »).
 pub fn float_everywhere(window: &WebviewWindow) {
     let Ok(ptr) = window.ns_window() else {
         return;
     };
     // SAFETY : Tauri renvoie le NSWindow de cette fenêtre ; appelé sur le fil principal.
     let ns: &NSWindow = unsafe { &*ptr.cast::<NSWindow>() };
+    // Comportement complet, pas un « ou » avec l'existant : certaines options sont exclusives
+    // entre elles (Managed/Stationary…) et macOS lève une exception si on les combine.
     ns.setCollectionBehavior(
-        ns.collectionBehavior()
-            | NSWindowCollectionBehavior::CanJoinAllSpaces
-            | NSWindowCollectionBehavior::FullScreenAuxiliary
+        NSWindowCollectionBehavior::CanJoinAllSpaces
             | NSWindowCollectionBehavior::Stationary
-            | NSWindowCollectionBehavior::IgnoresCycle,
+            | NSWindowCollectionBehavior::IgnoresCycle
+            | NSWindowCollectionBehavior::FullScreenAuxiliary
+            | NSWindowCollectionBehavior::CanJoinAllApplications,
     );
+    ns.setLevel(NSStatusWindowLevel);
+    ns.setHidesOnDeactivate(false);
 }
 
 thread_local! {

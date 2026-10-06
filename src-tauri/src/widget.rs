@@ -1,6 +1,7 @@
 //! Fenêtre widget : ancrage au coin de l'écran, redimensionnement, pluie de pétales (D-026, D-027).
 
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::Mutex;
 use std::time::Duration;
 
 use tauri::{
@@ -73,6 +74,9 @@ pub fn widget_layout(
 ) -> Result<(), String> {
     let monitor = monitor_of(&window).ok_or("aucun écran détecté")?;
     let (x, y) = anchored_origin(&corner, logical_work_area(&monitor), width, height);
+    if let Ok(mut c) = CORNER.lock() {
+        c.clone_from(&corner);
+    }
     // Position puis taille dans le même tour de boucle : macOS les affiche ensemble.
     window
         .set_position(LogicalPosition::new(x, y))
@@ -113,6 +117,103 @@ pub fn hide_main(app: AppHandle) -> Result<(), String> {
         Some(w) => w.close().map_err(|e| e.to_string()),
         None => Ok(()),
     }
+}
+
+// ---------- suivre l'écran du curseur (D-038) ----------
+
+static CORNER: Mutex<String> = Mutex::new(String::new());
+static FOLLOW_ENABLED: AtomicBool = AtomicBool::new(true);
+const FOLLOW_POLL: Duration = Duration::from_millis(400);
+/// Le curseur doit rester sur l'autre écran 3 relevés de suite (≈ 1,2 s) : traverser un écran
+/// pour atteindre l'autre ne déplace pas le widget.
+pub const FOLLOW_STEPS: u32 = 3;
+
+/// Index de l'écran (rectangles logiques) qui contient le point.
+pub fn screen_at(point: (f64, f64), screens: &[Rect]) -> Option<usize> {
+    screens.iter().position(|r| {
+        point.0 >= r.x && point.0 < r.x + r.w && point.1 >= r.y && point.1 < r.y + r.h
+    })
+}
+
+/// Hystérésis : propose de changer d'écran seulement après `FOLLOW_STEPS` relevés concordants.
+#[derive(Default)]
+pub struct Follower {
+    pending: Option<usize>,
+    count: u32,
+}
+
+impl Follower {
+    pub fn step(&mut self, current: usize, under_cursor: Option<usize>) -> Option<usize> {
+        match under_cursor {
+            Some(s) if s != current => {
+                if self.pending == Some(s) {
+                    self.count += 1;
+                } else {
+                    self.pending = Some(s);
+                    self.count = 1;
+                }
+                if self.count >= FOLLOW_STEPS {
+                    self.pending = None;
+                    self.count = 0;
+                    return Some(s);
+                }
+            }
+            _ => {
+                self.pending = None;
+                self.count = 0;
+            }
+        }
+        None
+    }
+}
+
+#[tauri::command]
+pub fn set_follow_screen(enabled: bool) {
+    FOLLOW_ENABLED.store(enabled, Ordering::Relaxed);
+}
+
+/// Surveille l'écran du curseur et y déplace le widget, au même coin.
+pub fn start_follow(app: AppHandle) {
+    std::thread::spawn(move || {
+        let mut follower = Follower::default();
+        loop {
+            std::thread::sleep(FOLLOW_POLL);
+            if FOLLOW_ENABLED.load(Ordering::Relaxed) {
+                let _ = follow_once(&app, &mut follower);
+            }
+        }
+    });
+}
+
+fn follow_once(app: &AppHandle, follower: &mut Follower) -> Option<()> {
+    let widget = app.get_webview_window("widget")?;
+    if !widget.is_visible().ok()? {
+        return None;
+    }
+    let monitors = app.available_monitors().ok()?;
+    if monitors.len() < 2 {
+        return None;
+    }
+    // Position du curseur : en pixels de l'écran principal (tao) → points.
+    let primary_scale = app.primary_monitor().ok()??.scale_factor();
+    let c = app.cursor_position().ok()?;
+    let cursor = (c.x / primary_scale, c.y / primary_scale);
+    let screens: Vec<Rect> = monitors.iter().map(logical_full_area).collect();
+    let here = widget.current_monitor().ok()??;
+    let current = monitors
+        .iter()
+        .position(|m| m.position() == here.position() && m.size() == here.size())?;
+    let target = follower.step(current, screen_at(cursor, &screens))?;
+    let size = widget.outer_size().ok()?;
+    let scale = widget.scale_factor().ok()?;
+    let corner = CORNER.lock().ok()?.clone();
+    let (x, y) = anchored_origin(
+        &corner,
+        logical_work_area(&monitors[target]),
+        size.width as f64 / scale,
+        size.height as f64 / scale,
+    );
+    widget.set_position(LogicalPosition::new(x, y)).ok()
 }
 
 static QUITTING: AtomicBool = AtomicBool::new(false);
@@ -214,6 +315,41 @@ mod tests {
             anchored_origin("?", AREA, 10.0, 10.0),
             anchored_origin("top-right", AREA, 10.0, 10.0)
         );
+    }
+
+    #[test]
+    fn ecran_sous_le_curseur() {
+        let screens = [
+            AREA,
+            Rect {
+                x: 1440.0,
+                y: 0.0,
+                w: 1920.0,
+                h: 1080.0,
+            },
+        ];
+        assert_eq!(screen_at((100.0, 100.0), &screens), Some(0));
+        assert_eq!(screen_at((2000.0, 500.0), &screens), Some(1));
+        assert_eq!(screen_at((-5.0, 100.0), &screens), None);
+    }
+
+    #[test]
+    fn le_widget_change_d_ecran_apres_trois_releves() {
+        let mut f = Follower::default();
+        assert_eq!(f.step(0, Some(1)), None);
+        assert_eq!(f.step(0, Some(1)), None);
+        assert_eq!(f.step(0, Some(1)), Some(1));
+    }
+
+    #[test]
+    fn traverser_un_ecran_ne_deplace_pas_le_widget() {
+        let mut f = Follower::default();
+        assert_eq!(f.step(0, Some(1)), None);
+        assert_eq!(f.step(0, Some(0)), None); // retour : compteur remis à zéro
+        assert_eq!(f.step(0, Some(1)), None);
+        assert_eq!(f.step(0, Some(1)), None);
+        assert_eq!(f.step(0, Some(2)), None); // autre écran : on recommence
+        assert_eq!(f.step(0, None), None);
     }
 
     #[test]

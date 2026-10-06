@@ -114,3 +114,6 @@ export async function syncAutostart(enabled: boolean) {
     console.error("autostart", e);
   }
 }
+
+/** Avec plusieurs écrans, le widget suit l'écran du curseur (D-038). */
+export const setFollowScreen = (enabled: boolean) => call("set_follow_screen", { enabled });

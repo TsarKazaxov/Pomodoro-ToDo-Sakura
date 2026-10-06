@@ -129,6 +129,16 @@ export function SettingsTab({ data }: { data: DataFile }) {
           </div>
         </div>
         <div className={styles.settingRow}>
+          <label htmlFor="s-follow">Avec plusieurs écrans, suivre l'écran du curseur</label>
+          <input
+            id="s-follow"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.followCursorScreen}
+            onChange={(e) => set({ followCursorScreen: e.target.checked })}
+          />
+        </div>
+        <div className={styles.settingRow}>
           <label htmlFor="s-login">Lancer Sakura au démarrage du Mac</label>
           <input
             id="s-login"

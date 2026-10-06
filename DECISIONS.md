@@ -277,3 +277,13 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - Version 1.0.0.
 - Icône : ensō à l'encre sur papier washi, un pétale de sakura posé sur le trait (générée depuis le tracé du widget, cohérente avec lui). Icône de barre de menu : l'ensō seul, image « template ».
 - Pas de tag `v1.0.0` poussé automatiquement : publier une Release est un acte public, déclenché par `git tag v1.0.0 && git push origin v1.0.0` après validation sur le Mac (README).
+
+---
+
+## V1.0.1 — Retours du premier test sur Mac
+
+### D-038 · Widget omniprésent : deuxième écran et Stage Manager
+- **Constat** (test réel) : le widget restait sur l'écran où il était né et disparaissait avec Stage Manager quand une autre app était au premier plan.
+- **Deuxième écran** : le widget suit l'écran où se trouve le curseur, au même coin. Le curseur doit y rester ≈ 1,2 s (3 relevés à 400 ms) : traverser un écran pour atteindre l'autre ne le déplace pas. Réglage « Avec plusieurs écrans, suivre l'écran du curseur », activé par défaut. Rien ne tourne avec un seul écran.
+- **Stage Manager** : comportement de fenêtre `CanJoinAllApplications` (macOS 13+, fait pour ce cas) ; niveau de fenêtre « status » (au-dessus des palettes flottantes des autres apps) ; ne se cache jamais à la désactivation. Le comportement est désormais posé en entier (et non ajouté à l'existant) car certaines options sont exclusives entre elles.
+- Non retenu pour l'instant : convertir le widget en `NSPanel` (seule façon connue d'apparaître par-dessus une app en plein écran sur certains macOS). La conversion de classe à chaud est fragile ; à faire seulement si le plein écran pose problème.

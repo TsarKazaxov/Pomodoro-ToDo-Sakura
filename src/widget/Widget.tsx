@@ -16,6 +16,7 @@ import {
   syncAutostart,
   trayUpdate,
   widgetLayout,
+  setFollowScreen,
 } from "../platform";
 import { flush, onReward, useSakura, type Reward } from "../state/store";
 import { Enso } from "../ui/Enso";
@@ -138,6 +139,10 @@ function WidgetReady({ data }: { data: DataFile }) {
   useEffect(() => {
     void syncAutostart(data.settings.launchAtLogin);
   }, [data.settings.launchAtLogin]);
+
+  useEffect(() => {
+    void setFollowScreen(data.settings.followCursorScreen);
+  }, [data.settings.followCursorScreen]);
 
   useEffect(
     () =>
