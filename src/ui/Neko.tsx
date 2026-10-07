@@ -2,7 +2,7 @@
 // les animations.
 
 import { memo, useMemo } from "react";
-import { FRAMES, framePaths, type Mood } from "./neko";
+import { FRAMES, framePaths, type Mood } from "./nekoSprite";
 import { useReducedMotion } from "./hooks";
 
 const LABEL: Record<Mood, string> = {

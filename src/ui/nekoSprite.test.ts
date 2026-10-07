@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FRAMES, framePaths, PALETTE } from "./neko";
+import { FRAMES, framePaths, PALETTE } from "./nekoSprite";
 
 describe("Neko", () => {
   it("chaque image fait 16 × 16 cases, toutes de couleur connue", () => {

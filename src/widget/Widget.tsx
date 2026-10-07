@@ -33,7 +33,7 @@ import { Enso } from "../ui/Enso";
 import { formatClock } from "../ui/format";
 import { Heatmap } from "../ui/Heatmap";
 import { Neko } from "../ui/Neko";
-import type { Mood } from "../ui/neko";
+import type { Mood } from "../ui/nekoSprite";
 import { useNow } from "../ui/hooks";
 import { spawnPetals } from "../ui/petals";
 import { useHoverExpand } from "./useHoverExpand";
