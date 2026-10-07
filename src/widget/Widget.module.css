@@ -96,6 +96,24 @@
   width: 100%;
   height: 100%;
 }
+/* Neko (D-043) : au centre du petit ensō, au-dessus du temps dans le grand. 16 cases × 1,5 et
+   × 2 px : des pixels entiers sur un écran Retina. */
+.miniEnso {
+  position: relative;
+}
+.miniEnso .miniNeko {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 24px;
+  height: 24px;
+}
+.bigEnso .bigNeko {
+  position: static;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 2px;
+}
 .compactText {
   min-width: 0;
 }
@@ -204,6 +222,8 @@
   font-weight: 700;
   font-size: 27px;
   font-variant-numeric: tabular-nums;
+  justify-items: center;
+  line-height: 1;
 }
 .side {
   display: grid;

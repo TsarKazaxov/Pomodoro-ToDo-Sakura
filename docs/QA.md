@@ -65,6 +65,7 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Ouvert au survol, cliquer dedans puis sortir le curseur → il reste ouvert (V1.0.3).
 - [ ] Glisser le widget en haut au milieu de l'écran → il se place centré sous la caméra ; déployé, il grandit des deux côtés (V1.0.3).
 - [ ] Réglages → Position du widget : les huit cases déplacent le widget (V1.0.3).
+- [ ] Neko est visible dans l'ensō : il dort à l'arrêt, tape pendant le focus, boit son thé pendant la pause (V1.0.4).
 - [ ] Un clic sur « Démarrer » agit du premier coup, même quand Sakura n'est pas l'app active.
 - [ ] Cocher 4 priorités en moins de 10 min : pétales, puis pluie sur tout l'écran au 4ᵉ ; les clics passent à travers la pluie.
 
@@ -72,6 +73,12 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Lance un focus, mets le Mac en veille 5 min, réveille-le : le temps restant a bien avancé de 5 min.
 - [ ] Fin de focus widget replié : notification macOS + son ; pétales au prochain survol.
 - [ ] Le temps restant s'affiche à côté de l'ensō dans la barre de menu.
+
+**Prolongation (V1.0.4)** — règle un focus de 1 min dans les Réglages pour tester vite
+- [ ] Continue de taper ou de bouger la souris à la fin du focus → « +00:05 », pastille « Prolongation », notification « Tu continues ».
+- [ ] Lâche clavier et souris 2 min → la pause démarre ; il lui reste ~3 min (elle a commencé quand tu t'es arrêté).
+- [ ] En prolongation, « Faire la pause » → la pause de 5 min démarre tout de suite.
+- [ ] Ne touche à rien à la fin du focus → la pause démarre comme avant.
 
 **Raccourcis et menu**
 - [ ] ⌥⌘P démarre / suspend ; ⌥⌘N ouvre le widget avec le curseur dans l'ajout rapide ; ⌥⌘S ouvre la vue complète.

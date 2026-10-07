@@ -36,6 +36,7 @@ pub fn run() {
             widget::widget_drag_start,
             widget::widget_snap,
             widget::mouse_pressed,
+            widget::idle_seconds,
             tray::tray_update,
             tray::quit_app,
         ])

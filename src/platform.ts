@@ -156,6 +156,29 @@ export async function pressWidget(): Promise<"drag" | "click"> {
   }
 }
 
+/**
+ * Dernière activité clavier ou souris, toutes apps confondues (D-042). Sous macOS, le temps
+ * d'inactivité système est relevé chaque seconde ; aucune frappe n'est lue, seulement l'instant
+ * de la dernière. Dans l'aperçu navigateur : les événements de la page.
+ */
+export function watchActivity(): () => number | null {
+  let last: number | null = null;
+  if (!inTauri) {
+    const seen = () => (last = Date.now());
+    for (const ev of ["mousemove", "mousedown", "keydown", "wheel"])
+      window.addEventListener(ev, seen, { passive: true });
+    return () => last;
+  }
+  window.setInterval(() => {
+    void invoke<number | null>("idle_seconds")
+      .then((s) => {
+        last = s === null ? null : Date.now() - s * 1000;
+      })
+      .catch(() => (last = null));
+  }, 1000);
+  return () => last;
+}
+
 /** Donne le focus au widget : un clic ailleurs le fera alors se replier (D-041). */
 export async function focusWidget(): Promise<void> {
   if (!inTauri) return;

@@ -36,6 +36,35 @@ describe("réducteur", () => {
     ).toEqual([]);
   });
 
+  it("prolongation : effet unique, puis « Faire la pause » compte le pomodoro (D-042)", () => {
+    let d = base();
+    d = reduce(d, { type: "task/setCurrent", id: firstId(d) }, T0).data;
+    d = reduce(d, { type: "timer/toggle" }, T0).data;
+    const end = T0 + 25 * MIN;
+    const r = reduce(d, { type: "timer/tick", lastInputAt: end }, end + 1000);
+    expect(r.effects).toEqual([{ kind: "overtime" }]);
+    expect(r.data.tasks[0]!.pomodorosSpent).toBe(0);
+    const again = reduce(r.data, { type: "timer/tick", lastInputAt: end + 2000 }, end + 2000);
+    expect(again.effects).toEqual([]);
+    const brk = reduce(again.data, { type: "timer/toggle" }, end + 10 * MIN);
+    expect(brk.data.timer.phase).toBe("short_break");
+    expect(brk.data.tasks[0]!.pomodorosSpent).toBe(1);
+    expect(brk.data.sessions[brk.data.sessions.length - 1]).toMatchObject({
+      type: "focus",
+      completed: true,
+    });
+    expect(brk.effects[0]).toMatchObject({ kind: "focusDone", breakMinutes: 5 });
+  });
+
+  it("réglage de prolongation coupé : la pause démarre comme avant", () => {
+    let d = base();
+    d = reduce(d, { type: "settings/update", patch: { extendWhileActive: false } }, T0).data;
+    d = reduce(d, { type: "timer/toggle" }, T0).data;
+    const end = T0 + 25 * MIN;
+    const r = reduce(d, { type: "timer/tick", lastInputAt: end }, end + 1000);
+    expect(r.data.timer.phase).toBe("short_break");
+  });
+
   it("fin de focus : effet avec la tâche en cours et la durée de la pause", () => {
     let d = base();
     d = reduce(d, { type: "task/setCurrent", id: firstId(d) }, T0).data;

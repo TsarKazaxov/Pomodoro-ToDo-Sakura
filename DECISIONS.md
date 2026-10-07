@@ -316,3 +316,24 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - **Aimantation** : l'écran est découpé en tiers ; lâché en plein centre, le widget rejoint le bord le plus proche.
 - Pas de position au centre de l'écran : déployé (360 × 520), le widget masquerait le travail.
 - Réglages et premier lancement : grille 3 × 3 dont la case centrale est vide.
+
+---
+
+## V1.0.4 — Prolongation automatique, Neko
+
+### D-042 · Le focus se prolonge quand tu travailles encore
+- **Constat** : la pause tombait en plein élan ; il fallait cliquer pour continuer, et le temps travaillé après la fin du focus n'était pas compté.
+- **Détection** : macOS donne le temps écoulé depuis la dernière frappe ou le dernier mouvement de souris, toutes apps confondues (`CGEventSourceSecondsSinceLastEventType`). Aucune touche n'est lue, aucune autorisation n'est demandée. Relevé chaque seconde par le widget.
+- **Règle** : à la fin du focus, si tu as touché clavier ou souris dans les 30 dernières secondes, le focus se **prolonge** : le temps s'affiche en « +mm:ss », la pastille dit « Prolongation », un tintement doux et une notification signalent que le pomodoro est fait.
+- **Fin de la prolongation** : 2 min sans activité → la pause démarre à l'heure de ta dernière activité (elle a donc déjà couru 2 min : tu te reposes depuis ce moment-là). Ou tout de suite avec « Faire la pause » (le bouton principal), « Passer » ou ⌥⌘P.
+- **Ce qui est enregistré** : une seule session de focus, complète, de son début à ta dernière activité. Le pomodoro est compté à la fin de la prolongation.
+- **Veille, app fermée** : la dernière activité est notée toutes les 30 s dans l'état du minuteur. Au réveil, la souris qui bouge ne prolonge pas le focus rétroactivement : la prolongation s'arrête à la dernière activité notée avant la veille (± 30 s). Une fin de focus survenue pendant la veille ne se prolonge jamais.
+- **Ce n'est pas une suppression de la pause** : la pause est différée, pas annulée. Désactivable : Réglages → Minuteur.
+- Non retenu : prolonger aussi pendant la pause (le but de la pause est de s'arrêter) ; un plafond de durée (à voir à l'usage).
+
+### D-043 · Neko, le compagnon pixel
+- Un petit chat blanc façon maneki-neko, pixel art 16 × 16, dans l'ensō : au centre du petit, au-dessus du temps dans le grand.
+- Une humeur par état : endormi (« z ») à l'arrêt ; bandeau rouge (hachimaki) et pattes qui tapent pendant le focus ; goutte de sueur en prolongation ; bol de matcha fumant pendant la pause ; il cligne des yeux quand le minuteur est suspendu.
+- Deux images par humeur, alternées au tick d'une seconde déjà en place : aucune animation supplémentaire, aucun coût CPU mesurable (D-036). Image fixe si « Réduire les animations » est activé dans macOS.
+- Dessiné en SVG (`crispEdges`), une dizaine de chemins par image ; tailles 24 et 32 px = pixels entiers sur écran Retina.
+- Désactivable : Réglages → Widget.

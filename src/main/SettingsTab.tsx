@@ -64,6 +64,21 @@ export function SettingsTab({ data }: { data: DataFile }) {
           max={12}
           onChange={(v) => set({ focusesBeforeLongBreak: v })}
         />
+        <div className={styles.settingRow}>
+          <label htmlFor="s-extend">
+            Si je travaille encore à la fin du focus, continuer à compter
+            <small className={styles.settingHint}>
+              La pause démarre quand tu t'arrêtes (2 min sans clavier ni souris).
+            </small>
+          </label>
+          <input
+            id="s-extend"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.extendWhileActive}
+            onChange={(e) => set({ extendWhileActive: e.target.checked })}
+          />
+        </div>
       </fieldset>
 
       <fieldset className={styles.fieldset}>
@@ -127,6 +142,16 @@ export function SettingsTab({ data }: { data: DataFile }) {
               </button>
             ))}
           </div>
+        </div>
+        <div className={styles.settingRow}>
+          <label htmlFor="s-neko">Afficher Neko, le chat pixel, dans l'ensō</label>
+          <input
+            id="s-neko"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.showCompanion}
+            onChange={(e) => set({ showCompanion: e.target.checked })}
+          />
         </div>
         <div className={styles.settingRow}>
           <label htmlFor="s-follow">Avec plusieurs écrans, suivre l'écran du curseur</label>

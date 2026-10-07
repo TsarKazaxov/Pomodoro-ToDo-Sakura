@@ -11,7 +11,8 @@ export type Action =
   | { type: "timer/toggle" }
   | { type: "timer/skip" }
   | { type: "timer/reset" }
-  | { type: "timer/tick" }
+  /** `lastInputAt` : dernière activité clavier/souris, pour la prolongation (D-042). */
+  | { type: "timer/tick"; lastInputAt?: number | null }
   | { type: "task/quickAdd"; raw: string; priority: boolean }
   | { type: "task/setStatus"; id: string; status: TaskStatus }
   | { type: "task/setCurrent"; id: string | null }
@@ -26,6 +27,8 @@ export type Action =
 export type Effect =
   | { kind: "focusDone"; taskId?: string; breakMinutes: number }
   | { kind: "breakDone" }
+  /** Le focus est arrivé à son terme pendant que tu travaillais : il se prolonge (D-042). */
+  | { kind: "overtime" }
   | { kind: "taskDone"; taskId: string; points: number };
 
 export interface Reduced {
@@ -50,6 +53,8 @@ function timerEffects(before: DataFile, after: DataFile, tr: timer.Transition): 
       );
     } else effects.push({ kind: "breakDone" });
   }
+  if (before.timer.overtimeAt === null && after.timer.overtimeAt !== null)
+    effects.push({ kind: "overtime" });
   return effects;
 }
 
@@ -59,16 +64,22 @@ export function reduce(data: DataFile, action: Action, now: number): Reduced {
     case "timer/tick":
     case "timer/skip":
     case "timer/reset": {
+      const d = timer.durationsFrom(data.settings);
       const tr =
         action.type === "timer/tick"
-          ? timer.advance(data.timer, timer.durationsFrom(data.settings), now)
+          ? timer.advance(data.timer, d, now, {
+              lastInputAt: action.lastInputAt ?? null,
+              extend: data.settings.extendWhileActive,
+            })
           : action.type === "timer/skip"
-            ? timer.skip(data.timer, now)
+            ? timer.skip(data.timer, now, d)
             : timer.reset(data.timer, now);
       const next = applyTransition(data, tr);
       return next === data ? same : { data: next, effects: timerEffects(data, next, tr) };
     }
     case "timer/toggle": {
+      // En prolongation, le bouton principal lance la pause (« Faire la pause »).
+      if (timer.isOvertime(data.timer)) return reduce(data, { type: "timer/skip" }, now);
       // Rattrape d'abord une phase échue, pour ne jamais suspendre un focus déjà terminé.
       const caught = reduce(data, { type: "timer/tick" }, now);
       const t = timer.toggle(caught.data.timer, now);

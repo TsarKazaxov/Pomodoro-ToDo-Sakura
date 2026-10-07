@@ -2,12 +2,21 @@
 // minuteur arrêté par l'utilisateur (D-018).
 
 export const fr = {
-  phase: { idle: "Arrêté", paused: "Suspendu", focus: "Focus", break: "Pause" },
+  phase: {
+    idle: "Arrêté",
+    paused: "Suspendu",
+    focus: "Focus",
+    break: "Pause",
+    overtime: "Prolongation",
+  },
   phaseLong: { focus: "Focus", short_break: "Pause courte", long_break: "Pause longue" },
   start: "Démarrer",
   resume: "Reprendre",
   suspend: "Suspendre",
   skip: "Passer",
+  takeBreak: "Faire la pause",
+  overtimeLine: "Tu continues : la pause attend que tu t'arrêtes",
+  overtimeNotice: "Tu continues : je compte. La pause démarrera quand tu t'arrêteras.",
   reset: "Réinitialiser",
   currentTask: "Tâche en cours",
   freeFocus: "Aucune tâche (focus libre)",

@@ -543,6 +543,12 @@ h2 {
   gap: 12px;
   font-size: 13px;
 }
+.settingHint {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
 .settingRow input[type="range"] {
   accent-color: var(--ink);
   width: 150px;

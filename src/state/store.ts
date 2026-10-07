@@ -26,7 +26,9 @@ export interface Snapshot {
 export type Reward =
   | { kind: "task"; tier: number; points: number; origin: string }
   | { kind: "focus"; breakMinutes: number; taskTitle?: string }
-  | { kind: "break" };
+  | { kind: "break" }
+  /** Focus arrivé à son terme pendant que tu travaillais : il se prolonge (D-042). */
+  | { kind: "overtime" };
 
 /** Messages entre fenêtres. En production : événements Tauri (src/state/tauriTransport.ts). */
 export interface Transport {
@@ -188,6 +190,10 @@ function handleEffects(effects: Effect[], origin: string, data: DataFile) {
         ? { kind: "focus", breakMinutes: e.breakMinutes, taskTitle: title }
         : { kind: "focus", breakMinutes: e.breakMinutes };
       if (data.settings.soundEnabled) ctx.hooks.playChime?.(2, data.settings.soundVolume);
+    } else if (e.kind === "overtime") {
+      reward = { kind: "overtime" };
+      // Un seul coup, doux : le pomodoro est fait, sans couper l'élan.
+      if (data.settings.soundEnabled) ctx.hooks.playChime?.(1, 0.4 * data.settings.soundVolume);
     } else if (e.kind === "breakDone") {
       reward = { kind: "break" };
       if (data.settings.soundEnabled) ctx.hooks.playChime?.(1, 0.5 * data.settings.soundVolume);
@@ -262,6 +268,8 @@ export async function initOwner(opts: {
   deviceId: string;
   hooks?: OwnerHooks;
   now?: () => number;
+  /** Dernière activité clavier/souris (macOS), pour la prolongation du focus (D-042). */
+  lastInputAt?: () => number | null;
 }): Promise<() => void> {
   const disk = opts.openStore(opts.dataDir);
   ctx = {
@@ -292,7 +300,11 @@ export async function initOwner(opts: {
     useSakura.setState({ status: "error", detail: String(e) });
     broadcast();
   }
-  const tick = setInterval(() => applyOwner({ type: "timer/tick" }, opts.label), 1000);
+  const lastInputAt = opts.lastInputAt ?? (() => null);
+  const tick = setInterval(
+    () => applyOwner({ type: "timer/tick", lastInputAt: lastInputAt() }, opts.label),
+    1000,
+  );
   const ext = setInterval(() => void checkExternalChange(), EXTERNAL_CHECK_MS);
   return () => {
     clearInterval(tick);

@@ -122,6 +122,28 @@ pub fn nearest_anchor(center: (f64, f64), area: Rect) -> &'static str {
     grid[row][col]
 }
 
+#[cfg(target_os = "macos")]
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    fn CGEventSourceSecondsSinceLastEventType(state: i32, event_type: u32) -> f64;
+}
+
+/// Secondes depuis la dernière frappe ou le dernier mouvement de souris, toutes apps confondues
+/// (D-042). Ne lit aucune touche et ne demande aucune autorisation : seulement le temps écoulé.
+#[tauri::command]
+pub fn idle_seconds() -> Option<f64> {
+    #[cfg(target_os = "macos")]
+    {
+        // kCGEventSourceStateHIDSystemState = 1 ; kCGAnyInputEventType = ~0.
+        let s = unsafe { CGEventSourceSecondsSinceLastEventType(1, u32::MAX) };
+        s.is_finite().then_some(s.max(0.0))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        None
+    }
+}
+
 /// Bouton gauche de la souris enfoncé (fin d'un glisser ou d'un clic, D-041).
 #[tauri::command]
 pub fn mouse_pressed() -> bool {

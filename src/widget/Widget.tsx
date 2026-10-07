@@ -5,7 +5,14 @@ import { comboVisible } from "../core/combo";
 import { shouldSplit } from "../core/stats";
 import { currentTask, priorities } from "../core/tasks";
 import { dayKeyAt } from "../core/time";
-import { durationsFrom, isPaused, progress, remainingMs } from "../core/timer";
+import {
+  durationsFrom,
+  isOvertime,
+  isPaused,
+  overtimeMs,
+  progress,
+  remainingMs,
+} from "../core/timer";
 import type { Corner, DataFile, Settings } from "../core/types";
 import { fr } from "../i18n/fr";
 import {
@@ -25,6 +32,8 @@ import { flush, onReward, useSakura, type Reward } from "../state/store";
 import { Enso } from "../ui/Enso";
 import { formatClock } from "../ui/format";
 import { Heatmap } from "../ui/Heatmap";
+import { Neko } from "../ui/Neko";
+import type { Mood } from "../ui/neko";
 import { useNow } from "../ui/hooks";
 import { spawnPetals } from "../ui/petals";
 import { useHoverExpand } from "./useHoverExpand";
@@ -200,6 +209,10 @@ function WidgetReady({ data }: { data: DataFile }) {
           }
           return;
         }
+        if (r.kind === "overtime") {
+          void notify("Focus terminé", fr.overtimeNotice);
+          return;
+        }
         if (r.kind === "break") {
           if (!openRef.current)
             void notify("Pause terminée", "Lance le focus suivant quand tu es prêt.");
@@ -230,6 +243,7 @@ function WidgetReady({ data }: { data: DataFile }) {
   const d = durationsFrom(data.settings);
   const isBreak = t.phase === "short_break" || t.phase === "long_break";
   const paused = isPaused(t);
+  const overtime = isOvertime(t);
   const cur = currentTask(data.tasks);
   const prio = priorities(data.tasks);
   const open3 = prio.slice(0, 3);
@@ -240,7 +254,9 @@ function WidgetReady({ data }: { data: DataFile }) {
   const todayPoints = data.tasks
     .filter((x) => x.status === "done" && x.completedAt?.startsWith(today))
     .reduce((n, x) => n + data.settings.scale[x.size].points, 0);
-  const time = formatClock(remainingMs(t, d, now));
+  const time = overtime
+    ? `+${formatClock(overtimeMs(t, d, now))}`
+    : formatClock(remainingMs(t, d, now));
   const pill =
     t.phase === "idle"
       ? fr.phase.idle
@@ -248,7 +264,21 @@ function WidgetReady({ data }: { data: DataFile }) {
         ? fr.phase.paused
         : isBreak
           ? fr.phase.break
-          : fr.phase.focus;
+          : overtime
+            ? fr.phase.overtime
+            : fr.phase.focus;
+  const mood: Mood =
+    t.phase === "idle"
+      ? "sleep"
+      : paused
+        ? "wait"
+        : isBreak
+          ? "tea"
+          : overtime
+            ? "overtime"
+            : "work";
+  const tick = Math.floor(now / 1000);
+  const neko = data.settings.showCompanion;
   const pillClass =
     t.phase === "idle" || paused ? "" : isBreak ? styles.pillBreak : styles.pillFocus;
   const cycle = data.settings.focusesBeforeLongBreak;
@@ -256,17 +286,20 @@ function WidgetReady({ data }: { data: DataFile }) {
   const phaseLine =
     t.phase === "idle"
       ? fr.nextFocus(nInCycle, cycle)
-      : t.phase === "focus"
-        ? fr.focusOf(nInCycle, cycle)
-        : fr.breakLine(
-            fr.phaseLong[t.phase],
-            t.phase === "long_break"
-              ? data.settings.longBreakMinutes
-              : data.settings.shortBreakMinutes,
-          );
+      : overtime
+        ? fr.overtimeLine
+        : t.phase === "focus"
+          ? fr.focusOf(nInCycle, cycle)
+          : fr.breakLine(
+              fr.phaseLong[t.phase],
+              t.phase === "long_break"
+                ? data.settings.longBreakMinutes
+                : data.settings.shortBreakMinutes,
+            );
   const running = t.phase !== "idle" && !paused;
   const trayTitle = t.phase === "idle" ? "" : paused ? `‖ ${time}` : time;
-  const toggleLabel = t.phase === "idle" ? fr.start : paused ? fr.resume : fr.suspend;
+  const toggleLabel =
+    t.phase === "idle" ? fr.start : paused ? fr.resume : overtime ? fr.takeBreak : fr.suspend;
   const taskLine = cur ? cur.title : t.phase === "focus" ? fr.freeFocusRunning : fr.pickTask;
   useEffect(() => {
     void trayUpdate(trayTitle, toggleLabel, running);
@@ -295,7 +328,10 @@ function WidgetReady({ data }: { data: DataFile }) {
         onMouseDown={(e) => void press(e)}
         title="Cliquer pour ouvrir · glisser pour déplacer"
       >
-        <div className={styles.miniEnso}>{enso}</div>
+        <div className={styles.miniEnso}>
+          {enso}
+          {neko && <Neko mood={mood} tick={tick} className={styles.miniNeko} />}
+        </div>
         <div className={styles.compactText}>
           <div className={styles.time}>{time}</div>
           <div className={styles.task}>{taskLine}</div>
@@ -327,7 +363,10 @@ function WidgetReady({ data }: { data: DataFile }) {
           <div className={styles.timer}>
             <div className={styles.bigEnso}>
               {enso}
-              <div className={styles.bigTime}>{time}</div>
+              <div className={styles.bigTime}>
+                {neko && <Neko mood={mood} tick={tick} className={styles.bigNeko} />}
+                {time}
+              </div>
             </div>
             <div className={styles.side}>
               <span className={`${styles.pill} ${pillClass}`}>{pill}</span>
@@ -337,7 +376,7 @@ function WidgetReady({ data }: { data: DataFile }) {
                   className={`${styles.btn} ${styles.primary}`}
                   onClick={() => dispatch({ type: "timer/toggle" })}
                 >
-                  {t.phase === "idle" ? fr.start : paused ? fr.resume : fr.suspend}
+                  {toggleLabel}
                 </button>
                 <button className={styles.btn} onClick={() => dispatch({ type: "timer/skip" })}>
                   {fr.skip}

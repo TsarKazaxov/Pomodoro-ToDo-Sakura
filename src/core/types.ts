@@ -84,6 +84,10 @@ export interface Settings {
   launchAtLogin: boolean;
   /** Avec plusieurs écrans, le widget rejoint l'écran du curseur (D-038). */
   followCursorScreen: boolean;
+  /** Fin de focus pendant que tu travailles : le focus se prolonge, la pause attend (D-042). */
+  extendWhileActive: boolean;
+  /** Neko, le compagnon pixel dans l'ensō (D-043). */
+  showCompanion: boolean;
   /** Premier lancement terminé. */
   onboarded: boolean;
 }
@@ -102,6 +106,13 @@ export interface TimerState {
   pausedMs: number;
   /** Focus terminés dans le cycle courant, pour décider de la pause longue. */
   focusCount: number;
+  /**
+   * Prolongation (D-042) : fin prévue du focus dépassée pendant que tu travaillais. Le focus
+   * continue de compter ; la pause démarre quand tu t'arrêtes. `null` hors prolongation.
+   */
+  overtimeAt: number | null;
+  /** Dernière activité constatée pendant la prolongation, rafraîchie toutes les 30 s. */
+  lastActiveAt: number | null;
 }
 
 export interface DataFile {

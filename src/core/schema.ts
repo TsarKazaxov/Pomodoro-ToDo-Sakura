@@ -43,6 +43,8 @@ export function defaultSettings(): Settings {
     theme: "auto",
     launchAtLogin: true,
     followCursorScreen: true,
+    extendWhileActive: true,
+    showCompanion: true,
     onboarded: false,
   };
 }
@@ -175,6 +177,9 @@ function readSettings(v: unknown): Settings {
     launchAtLogin: typeof v.launchAtLogin === "boolean" ? v.launchAtLogin : d.launchAtLogin,
     followCursorScreen:
       typeof v.followCursorScreen === "boolean" ? v.followCursorScreen : d.followCursorScreen,
+    extendWhileActive:
+      typeof v.extendWhileActive === "boolean" ? v.extendWhileActive : d.extendWhileActive,
+    showCompanion: typeof v.showCompanion === "boolean" ? v.showCompanion : d.showCompanion,
     onboarded: v.onboarded === true,
   };
 }
@@ -196,6 +201,8 @@ function readTimer(v: unknown): TimerState {
     pausedAt: isNum(v.pausedAt) ? v.pausedAt : null,
     pausedMs: isNum(v.pausedMs) && v.pausedMs >= 0 ? v.pausedMs : 0,
     focusCount,
+    overtimeAt: phase === "focus" && isNum(v.overtimeAt) ? v.overtimeAt : null,
+    lastActiveAt: phase === "focus" && isNum(v.lastActiveAt) ? v.lastActiveAt : null,
   };
 }
 

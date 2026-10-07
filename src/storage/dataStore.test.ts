@@ -67,6 +67,8 @@ describe("aller-retour", () => {
       pausedAt: null,
       pausedMs: 0,
       focusCount: 2,
+      overtimeAt: null,
+      lastActiveAt: null,
     };
     await store.save(d);
     const r = parseDataFile(fs.files.get(FILE)!.text);

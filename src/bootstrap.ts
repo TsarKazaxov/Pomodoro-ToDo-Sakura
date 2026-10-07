@@ -1,6 +1,6 @@
 // Démarrage d'une fenêtre : le widget devient propriétaire des données, la vue complète cliente.
 
-import { inTauri, petalRain, showMain, windowLabel } from "./platform";
+import { inTauri, petalRain, showMain, watchActivity, windowLabel } from "./platform";
 import { initClient, initOwner } from "./state/store";
 import { tauriTransport } from "./state/tauriTransport";
 import { DataStore } from "./storage/dataStore";
@@ -47,6 +47,7 @@ export function startWindow(): "widget" | "main" | "rain" {
         dataDir: inTauri ? await resolveDataDir() : "/apercu",
         openStore: (dir) => new DataStore(fs, dir),
         deviceId: deviceId(),
+        lastInputAt: watchActivity(),
         hooks: {
           playChime: (strikes, gain) => chime(strikes, gain),
           screenRain: (tier, origin) => {
