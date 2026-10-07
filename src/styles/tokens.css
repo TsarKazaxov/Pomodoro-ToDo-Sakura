@@ -1,0 +1,79 @@
+/* Tokens de Sakura (brief §3, D-015). Une seule source pour les deux fenêtres. */
+:root {
+  --paper: #f5f0e6;
+  --ink: #2b2622;
+  --ink-muted: #716860;
+  --sakura: #e8a0b0;
+  --shu: #bd3f2c;
+  --m0: #e6e0d3;
+  --m1: #c9d8a8;
+  --m2: #9dbb6e;
+  --m3: #6e9a45;
+  --m4: #46702a;
+  --surface: #fbf8f2;
+  --surface-2: #efe8db;
+  --line: #e0d7c7;
+  --f-display: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+  --f-ui: "Zen Kaku Gothic New", "Hiragino Sans", -apple-system, system-ui, sans-serif;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1c1a17;
+    --ink: #ede6da;
+    --ink-muted: #9a9088;
+    --sakura: #d88a9c;
+    --shu: #e0604a;
+    --m0: #2a2723;
+    --m1: #33452a;
+    --m2: #4a6a35;
+    --m3: #6a9448;
+    --m4: #94c266;
+    --surface: #25221e;
+    --surface-2: #2e2a25;
+    --line: #3a352f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #1c1a17;
+  --ink: #ede6da;
+  --ink-muted: #9a9088;
+  --sakura: #d88a9c;
+  --shu: #e0604a;
+  --m0: #2a2723;
+  --m1: #33452a;
+  --m2: #4a6a35;
+  --m3: #6a9448;
+  --m4: #94c266;
+  --surface: #25221e;
+  --surface-2: #2e2a25;
+  --line: #3a352f;
+  color-scheme: dark;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+/* Fenêtres widget et pluie : fond transparent, seule la carte est peinte. */
+html.transparent,
+html.transparent body {
+  background: transparent;
+  overflow: hidden;
+}
