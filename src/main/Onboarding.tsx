@@ -43,7 +43,7 @@ export function Onboarding() {
           </div>
         </div>
         <div className={styles.field}>
-          <span>Coin de l'écran pour le widget</span>
+          <span>Position du widget à l'écran</span>
           <CornerPicker value={corner} onChange={setCorner} />
         </div>
         <div className={styles.field}>

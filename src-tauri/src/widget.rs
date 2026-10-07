@@ -20,19 +20,37 @@ pub struct Rect {
     pub h: f64,
 }
 
-/// Position du coin haut-gauche d'une fenêtre `w × h` collée au coin `corner` de `area`.
-/// Le coin choisi reste fixe quand la taille change : la fenêtre grandit vers l'intérieur.
-pub fn anchored_origin(corner: &str, area: Rect, w: f64, h: f64) -> (f64, f64) {
-    let left = area.x + EDGE_GAP;
-    let right = area.x + area.w - w - EDGE_GAP;
-    let top = area.y + EDGE_GAP;
-    let bottom = area.y + area.h - h - EDGE_GAP;
-    match corner {
-        "top-left" => (left, top),
-        "bottom-left" => (left, bottom),
-        "bottom-right" => (right, bottom),
-        _ => (right, top),
-    }
+/// Les huit positions du widget (D-041) : quatre coins et le milieu de chaque bord.
+pub const ANCHORS: [&str; 8] = [
+    "top-left",
+    "top-center",
+    "top-right",
+    "middle-left",
+    "middle-right",
+    "bottom-left",
+    "bottom-center",
+    "bottom-right",
+];
+
+/// Position du coin haut-gauche d'une fenêtre `w × h` ancrée en `anchor` dans `area`.
+/// Le point d'ancrage reste fixe quand la taille change : la fenêtre grandit vers l'intérieur,
+/// ou des deux côtés quand elle est centrée sur un bord. Valeur inconnue : en haut à droite.
+pub fn anchored_origin(anchor: &str, area: Rect, w: f64, h: f64) -> (f64, f64) {
+    let (v, hz) = match anchor.split_once('-') {
+        Some(pair) if ANCHORS.contains(&anchor) => pair,
+        _ => ("top", "right"),
+    };
+    let x = match hz {
+        "left" => area.x + EDGE_GAP,
+        "center" => area.x + (area.w - w) / 2.0,
+        _ => area.x + area.w - w - EDGE_GAP,
+    };
+    let y = match v {
+        "middle" => area.y + (area.h - h) / 2.0,
+        "bottom" => area.y + area.h - h - EDGE_GAP,
+        _ => area.y + EDGE_GAP,
+    };
+    (x, y)
 }
 
 fn logical_work_area(m: &Monitor) -> Rect {
@@ -64,15 +82,56 @@ fn monitor_of(window: &WebviewWindow) -> Option<Monitor> {
         .or_else(|| window.primary_monitor().ok().flatten())
 }
 
-/// Coin de `area` le plus proche du point (centre du widget lâché).
-pub fn nearest_corner(center: (f64, f64), area: Rect) -> &'static str {
-    let left = center.0 < area.x + area.w / 2.0;
-    let top = center.1 < area.y + area.h / 2.0;
-    match (top, left) {
-        (true, true) => "top-left",
-        (true, false) => "top-right",
-        (false, true) => "bottom-left",
-        (false, false) => "bottom-right",
+/// Position la plus proche du point (centre du widget lâché) : l'écran est découpé en tiers.
+/// Lâché en plein centre, le widget rejoint le bord le plus proche.
+pub fn nearest_anchor(center: (f64, f64), area: Rect) -> &'static str {
+    let fx = (center.0 - area.x) / area.w;
+    let fy = (center.1 - area.y) / area.h;
+    let col = if fx < 1.0 / 3.0 {
+        0
+    } else if fx < 2.0 / 3.0 {
+        1
+    } else {
+        2
+    };
+    let row = if fy < 1.0 / 3.0 {
+        0
+    } else if fy < 2.0 / 3.0 {
+        1
+    } else {
+        2
+    };
+    if (row, col) == (1, 1) {
+        // Distance en points à chaque bord.
+        let d = [
+            (center.0 - area.x, "middle-left"),
+            (area.x + area.w - center.0, "middle-right"),
+            (center.1 - area.y, "top-center"),
+            (area.y + area.h - center.1, "bottom-center"),
+        ];
+        return d
+            .iter()
+            .min_by(|a, b| a.0.total_cmp(&b.0))
+            .map_or("top-center", |p| p.1);
+    }
+    let grid = [
+        ["top-left", "top-center", "top-right"],
+        ["middle-left", "", "middle-right"],
+        ["bottom-left", "bottom-center", "bottom-right"],
+    ];
+    grid[row][col]
+}
+
+/// Bouton gauche de la souris enfoncé (fin d'un glisser ou d'un clic, D-041).
+#[tauri::command]
+pub fn mouse_pressed() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        objc2_app_kit::NSEvent::pressedMouseButtons() & 1 == 1
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        false
     }
 }
 
@@ -96,7 +155,7 @@ pub fn widget_drag_start(window: WebviewWindow) {
     }
 }
 
-/// Fin d'un glisser : aimante le widget au coin le plus proche de l'écran où il a été lâché.
+/// Fin d'un glisser : aimante le widget à la position la plus proche sur l'écran où il a été lâché.
 #[tauri::command]
 pub fn widget_snap(window: WebviewWindow) -> Result<Snap, String> {
     let monitor = monitor_of(&window).ok_or("aucun écran détecté")?;
@@ -109,7 +168,7 @@ pub fn widget_snap(window: WebviewWindow) -> Result<Snap, String> {
         pos.x as f64 / scale + w / 2.0,
         pos.y as f64 / scale + h / 2.0,
     );
-    let corner = nearest_corner(center, area);
+    let corner = nearest_anchor(center, area);
     let (x, y) = anchored_origin(corner, area, w, h);
     window
         .set_position(LogicalPosition::new(x, y))
@@ -375,21 +434,72 @@ mod tests {
     }
 
     #[test]
-    fn coin_inconnu_haut_droite_par_defaut() {
+    fn position_inconnue_haut_droite_par_defaut() {
+        for bad in ["?", "middle-center", "top", ""] {
+            assert_eq!(
+                anchored_origin(bad, AREA, 10.0, 10.0),
+                anchored_origin("top-right", AREA, 10.0, 10.0)
+            );
+        }
+    }
+
+    #[test]
+    fn ancrage_au_milieu_des_bords() {
+        // Centré en haut, juste sous la barre de menu (et la caméra).
         assert_eq!(
-            anchored_origin("?", AREA, 10.0, 10.0),
-            anchored_origin("top-right", AREA, 10.0, 10.0)
+            anchored_origin("top-center", AREA, 260.0, 84.0),
+            (590.0, 29.0)
+        );
+        assert_eq!(
+            anchored_origin("bottom-center", AREA, 260.0, 84.0),
+            (590.0, 812.0)
+        );
+        assert_eq!(
+            anchored_origin("middle-left", AREA, 260.0, 84.0),
+            (4.0, 420.5)
+        );
+        assert_eq!(
+            anchored_origin("middle-right", AREA, 260.0, 84.0),
+            (1176.0, 420.5)
         );
     }
 
     #[test]
-    fn aimantation_au_coin_le_plus_proche() {
-        assert_eq!(nearest_corner((100.0, 100.0), AREA), "top-left");
-        assert_eq!(nearest_corner((1400.0, 60.0), AREA), "top-right");
-        assert_eq!(nearest_corner((80.0, 850.0), AREA), "bottom-left");
-        assert_eq!(nearest_corner((1300.0, 700.0), AREA), "bottom-right");
-        // Milieu exact : à droite et en bas (choix arbitraire mais stable).
-        assert_eq!(nearest_corner((720.0, 462.5), AREA), "bottom-right");
+    fn centre_sur_un_bord_le_widget_grandit_des_deux_cotes() {
+        let (x1, y1) = anchored_origin("top-center", AREA, 260.0, 84.0);
+        let (x2, y2) = anchored_origin("top-center", AREA, 380.0, 540.0);
+        assert_eq!(x1 + 130.0, x2 + 190.0);
+        assert_eq!(y1, y2);
+        let (_, y3) = anchored_origin("middle-right", AREA, 260.0, 84.0);
+        let (_, y4) = anchored_origin("middle-right", AREA, 380.0, 540.0);
+        assert_eq!(y3 + 42.0, y4 + 270.0);
+    }
+
+    #[test]
+    fn aimantation_a_la_position_la_plus_proche() {
+        assert_eq!(nearest_anchor((100.0, 100.0), AREA), "top-left");
+        assert_eq!(nearest_anchor((700.0, 60.0), AREA), "top-center");
+        assert_eq!(nearest_anchor((1400.0, 60.0), AREA), "top-right");
+        assert_eq!(nearest_anchor((60.0, 450.0), AREA), "middle-left");
+        assert_eq!(nearest_anchor((1380.0, 500.0), AREA), "middle-right");
+        assert_eq!(nearest_anchor((80.0, 850.0), AREA), "bottom-left");
+        assert_eq!(nearest_anchor((720.0, 880.0), AREA), "bottom-center");
+        assert_eq!(nearest_anchor((1300.0, 800.0), AREA), "bottom-right");
+    }
+
+    #[test]
+    fn lache_en_plein_centre_le_widget_rejoint_le_bord_le_plus_proche() {
+        // Zone 1440 × 875 depuis y = 25 : le centre (720, 462,5) est plus près du haut/bas.
+        assert_eq!(nearest_anchor((720.0, 400.0), AREA), "top-center");
+        assert_eq!(nearest_anchor((720.0, 520.0), AREA), "bottom-center");
+        let tall = Rect {
+            x: 0.0,
+            y: 0.0,
+            w: 900.0,
+            h: 1600.0,
+        };
+        assert_eq!(nearest_anchor((350.0, 800.0), tall), "middle-left");
+        assert_eq!(nearest_anchor((560.0, 800.0), tall), "middle-right");
     }
 
     #[test]

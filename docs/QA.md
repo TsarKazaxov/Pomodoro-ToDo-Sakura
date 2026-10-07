@@ -61,6 +61,10 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Choisir une tâche dans le menu « Tâche en cours » puis sortir le curseur → il se replie (V1.0.2).
 - [ ] Échap ou le bouton « – » en haut à droite → il se replie aussitôt (V1.0.2).
 - [ ] **Glisser la forme compacte** vers un autre coin → il s'y aimante ; vers l'autre écran → il y reste (V1.0.2).
+- [ ] **Cliquer** sur le widget replié → il s'ouvre aussitôt ; sortir le curseur → il reste ouvert ; cliquer dans une autre app → il se ferme (V1.0.3).
+- [ ] Ouvert au survol, cliquer dedans puis sortir le curseur → il reste ouvert (V1.0.3).
+- [ ] Glisser le widget en haut au milieu de l'écran → il se place centré sous la caméra ; déployé, il grandit des deux côtés (V1.0.3).
+- [ ] Réglages → Position du widget : les huit cases déplacent le widget (V1.0.3).
 - [ ] Un clic sur « Démarrer » agit du premier coup, même quand Sakura n'est pas l'app active.
 - [ ] Cocher 4 priorités en moins de 10 min : pétales, puis pluie sur tout l'écran au 4ᵉ ; les clics passent à travers la pluie.
 

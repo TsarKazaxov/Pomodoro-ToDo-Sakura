@@ -303,3 +303,16 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - Au lâcher (350 ms sans mouvement), il s'aimante au coin le plus proche de l'écran où il est posé ; ce coin devient le réglage « coin ».
 - Lâché sur un autre écran : « suivre l'écran du curseur » (D-038) est désactivé, sinon le widget repartirait aussitôt. Le réglage reste réactivable.
 - Pas de position libre : un widget entre deux coins se déploierait hors de l'écran. L'aimantation garde la règle « il grandit vers l'intérieur ».
+
+---
+
+## V1.0.3 — Ouvrir au clic, huit positions
+
+### D-041 · Ouvrir le widget au clic ; positions au milieu des bords
+- **Clic** : un clic sur le widget replié l'ouvre aussitôt, sans attendre le survol. Ouvert par un clic, ou cliqué une fois ouvert au survol, il est « épinglé » : il ne se replie plus quand le curseur sort, seulement au clic à l'extérieur (autre app, autre écran), à Échap ou au bouton « Réduire ». L'ouverture au survol reste inchangée.
+- Le clic donne le focus à la fenêtre du widget : c'est ce qui permet de détecter le clic à l'extérieur (la fenêtre perd le focus).
+- **Clic ou glisser** : le glisser natif de macOS avale le relâchement du bouton. Le widget lance donc le glisser dès l'appui puis interroge l'état du bouton (`NSEvent.pressedMouseButtons`) ; au relâchement, la fenêtre a bougé → glisser (aimantation), sinon → clic (ouverture). Remplace le délai de 350 ms de D-040 : l'aimantation se fait au relâchement.
+- **Huit positions** : les quatre coins plus le milieu de chaque bord (en haut au centre, juste sous la caméra ; en bas au centre ; au milieu à gauche ; au milieu à droite). Centré sur un bord, le widget grandit des deux côtés de ce bord.
+- **Aimantation** : l'écran est découpé en tiers ; lâché en plein centre, le widget rejoint le bord le plus proche.
+- Pas de position au centre de l'écran : déployé (360 × 520), le widget masquerait le travail.
+- Réglages et premier lancement : grille 3 × 3 dont la case centrale est vide.

@@ -2,7 +2,7 @@
 
 Minuteur Pomodoro, tâches du jour et heatmap d'effort, dans une petite fenêtre toujours visible sur macOS.
 
-- **Widget** dans un coin de l'écran : un ensō qui se dessine pendant le focus, la tâche en cours, tes priorités du jour, ta mini heatmap. Il se déploie quand tu poses le curseur dessus.
+- **Widget** dans un coin de l'écran ou au milieu d'un bord : un ensō qui se dessine pendant le focus, la tâche en cours, tes priorités du jour, ta mini heatmap. Il se déploie quand tu poses le curseur dessus ou quand tu cliques dessus ; un clic à l'extérieur le referme. Glisse-le pour le déplacer.
 - **Tâches** avec une taille T-shirt (XS à XL) : ajoute-les en une ligne, `Relire la spec #M`.
 - **Activité** : une heatmap façon GitHub remplie par l'effort accompli (les points des tâches terminées), et la **calibration** : est-ce que tes M prennent vraiment 4 pomodoros ?
 
@@ -24,7 +24,7 @@ Tes données restent chez toi, dans un fichier JSON sur iCloud Drive. Pas de com
 
    Puis ouvre Sakura normalement. À faire une seule fois par installation.
 
-4. Au premier lancement : choisis la durée du focus, le coin de l'écran, ta première tâche. Le widget apparaît dans le coin choisi.
+4. Au premier lancement : choisis la durée du focus, la position du widget, ta première tâche. Le widget apparaît à l'endroit choisi.
 5. À la première fin de focus, macOS demande l'autorisation d'afficher des notifications : accepte-la pour être prévenu quand le widget est replié.
 
 Le `.dmg` est **universel** : il fonctionne sur les Mac Apple Silicon (M1 et suivants) et Intel. macOS 11 Big Sur minimum.

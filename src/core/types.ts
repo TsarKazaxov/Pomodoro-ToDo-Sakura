@@ -46,8 +46,26 @@ export interface ScaleEntry {
 }
 export type Scale = Record<Size, ScaleEntry>;
 
-export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
-export const CORNERS: readonly Corner[] = ["top-left", "top-right", "bottom-left", "bottom-right"];
+/** Position du widget : quatre coins et le milieu de chaque bord (D-041). */
+export type Corner =
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "middle-left"
+  | "middle-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
+export const CORNERS: readonly Corner[] = [
+  "top-left",
+  "top-center",
+  "top-right",
+  "middle-left",
+  "middle-right",
+  "bottom-left",
+  "bottom-center",
+  "bottom-right",
+];
 
 export type Theme = "auto" | "light" | "dark";
 export const THEMES: readonly Theme[] = ["auto", "light", "dark"];

@@ -1,5 +1,8 @@
 // Déploiement au survol (D-021) : s'ouvre quand le curseur reste immobile 300 ms sur le widget,
 // se replie 600 ms après sa sortie, sauf pendant la saisie dans l'ajout rapide (D-039).
+// Déploiement au clic (D-041) : ouvert par un clic, ou cliqué une fois ouvert, le widget est
+// « épinglé » : il ne se replie plus à la sortie du curseur, seulement au clic à l'extérieur
+// (autre app ou bord transparent de la fenêtre), à Échap ou au bouton « Réduire ».
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -24,6 +27,8 @@ export function useHoverExpand(root: React.RefObject<HTMLElement | null>) {
   const suspended = useRef(false);
   /** Après « Réduire » ou Échap, pas de réouverture tant que le curseur n'est pas sorti. */
   const waitLeave = useRef(false);
+  /** Ouvert ou touché au clic : reste ouvert jusqu'à un clic à l'extérieur. */
+  const pinned = useRef(false);
   const openRef = useRef(open);
   openRef.current = open;
 
@@ -42,8 +47,9 @@ export function useHoverExpand(root: React.RefObject<HTMLElement | null>) {
 
   const armClose = useCallback(() => {
     window.clearTimeout(closeT.current);
+    if (pinned.current) return;
     closeT.current = window.setTimeout(() => {
-      if (!hovering.current && !typing()) setOpen(false);
+      if (!pinned.current && !hovering.current && !typing()) setOpen(false);
     }, CLOSE_DELAY_MS);
   }, [typing]);
 
@@ -54,8 +60,17 @@ export function useHoverExpand(root: React.RefObject<HTMLElement | null>) {
     const a = document.activeElement;
     if (a instanceof HTMLElement && root.current?.contains(a)) a.blur();
     waitLeave.current = hovering.current;
+    pinned.current = false;
     setOpen(false);
   }, [root]);
+
+  /** Ouverture au clic : immédiate et épinglée. */
+  const pin = useCallback(() => {
+    window.clearTimeout(openT.current);
+    window.clearTimeout(closeT.current);
+    pinned.current = true;
+    setOpen(true);
+  }, []);
 
   const suspend = useCallback((on: boolean) => {
     suspended.current = on;
@@ -66,6 +81,10 @@ export function useHoverExpand(root: React.RefObject<HTMLElement | null>) {
     // Clic dans une autre app : la fenêtre perd le focus, le widget se replie.
     const onWindowBlur = () => {
       hovering.current = false;
+      if (pinned.current) {
+        collapse();
+        return;
+      }
       const a = document.activeElement;
       if (a instanceof HTMLElement && root.current?.contains(a)) a.blur();
       armClose();
@@ -77,15 +96,21 @@ export function useHoverExpand(root: React.RefObject<HTMLElement | null>) {
       window.clearTimeout(openT.current);
       armClose();
     };
+    // Clic dans la fenêtre mais hors de la carte (marge transparente autour de l'ombre).
+    const onDocDown = (e: MouseEvent) => {
+      if (openRef.current && !root.current?.contains(e.target as Node)) collapse();
+    };
     window.addEventListener("blur", onWindowBlur);
     document.documentElement.addEventListener("mouseleave", onDocLeave);
+    document.addEventListener("mousedown", onDocDown);
     return () => {
       window.removeEventListener("blur", onWindowBlur);
       document.documentElement.removeEventListener("mouseleave", onDocLeave);
+      document.removeEventListener("mousedown", onDocDown);
       window.clearTimeout(openT.current);
       window.clearTimeout(closeT.current);
     };
-  }, [armClose, root]);
+  }, [armClose, collapse, root]);
 
   const handlers = {
     onMouseEnter() {
@@ -109,10 +134,17 @@ export function useHoverExpand(root: React.RefObject<HTMLElement | null>) {
         if (!hovering.current) armClose();
       }, 0);
     },
+    onMouseDown() {
+      // Un clic dans le widget déjà ouvert (au survol) l'épingle.
+      if (openRef.current) {
+        pinned.current = true;
+        window.clearTimeout(closeT.current);
+      }
+    },
     onKeyDown(e: React.KeyboardEvent) {
       if (e.key === "Escape") collapse();
     },
   };
 
-  return { open, setOpen, handlers, collapse, suspend };
+  return { open, setOpen, handlers, collapse, suspend, pin };
 }

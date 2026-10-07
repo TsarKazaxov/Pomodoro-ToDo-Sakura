@@ -6,7 +6,7 @@ import { shouldSplit } from "../core/stats";
 import { currentTask, priorities } from "../core/tasks";
 import { dayKeyAt } from "../core/time";
 import { durationsFrom, isPaused, progress, remainingMs } from "../core/timer";
-import type { DataFile, Settings } from "../core/types";
+import type { Corner, DataFile, Settings } from "../core/types";
 import { fr } from "../i18n/fr";
 import {
   notify,
@@ -17,8 +17,8 @@ import {
   trayUpdate,
   widgetLayout,
   setFollowScreen,
-  onWidgetMoved,
-  startWidgetDrag,
+  focusWidget,
+  pressWidget,
   widgetSnap,
 } from "../platform";
 import { flush, onReward, useSakura, type Reward } from "../state/store";
@@ -36,12 +36,21 @@ export const COMPACT = { w: 240, h: 64 };
 export const EXPANDED = { w: 360, h: 520 };
 const RESIZE_MS = 260;
 
-const CORNER_CLASS = {
-  "top-left": styles.tl,
-  "top-right": styles.tr,
-  "bottom-left": styles.bl,
-  "bottom-right": styles.br,
-} as const;
+const V_CLASS: Record<string, string | undefined> = {
+  top: styles.vt,
+  middle: styles.vm,
+  bottom: styles.vb,
+};
+const H_CLASS: Record<string, string | undefined> = {
+  left: styles.hl,
+  center: styles.hc,
+  right: styles.hr,
+};
+/** Classes de position de la carte dans sa fenêtre (D-041). */
+export function anchorClass(corner: Corner): string {
+  const [v = "", h = ""] = corner.split("-");
+  return `${V_CLASS[v] ?? styles.vt} ${H_CLASS[h] ?? styles.hr}`;
+}
 
 export function Widget() {
   const status = useSakura((s) => s.status);
@@ -59,7 +68,7 @@ function WidgetStatus() {
   }, [status]);
   const label = status === "ready" ? "" : fr.status[status];
   return (
-    <div className={`${styles.card} ${styles.tr}`}>
+    <div className={`${styles.card} ${anchorClass("top-right")}`}>
       <div className={styles.compact} style={{ gridTemplateColumns: "1fr" }}>
         <span className={styles.task}>{label}</span>
       </div>
@@ -72,7 +81,7 @@ function WidgetReady({ data }: { data: DataFile }) {
   const combo = useSakura((s) => s.combo);
   const now = useNow();
   const card = useRef<HTMLDivElement>(null);
-  const { open, setOpen, handlers, collapse, suspend } = useHoverExpand(card);
+  const { open, setOpen, handlers, collapse, suspend, pin } = useHoverExpand(card);
   const quickInput = useRef<HTMLInputElement>(null);
   const focusQuickAdd = useRef(false);
   const [expandedFrame, setExpandedFrame] = useState(false);
@@ -110,47 +119,35 @@ function WidgetReady({ data }: { data: DataFile }) {
     };
   }, [open, corner]);
 
-  // Glisser le widget replié vers un autre coin ou un autre écran (D-040). Au lâcher (plus de
-  // déplacement depuis 350 ms), il s'aimante au coin le plus proche ; posé sur un autre écran,
-  // il y reste : le suivi de l'écran du curseur est coupé.
-  const dragging = useRef(false);
-  const dragMoved = useRef(false);
-  const dragEnd = useRef<number | undefined>(undefined);
-  const finishDrag = useCallback(async () => {
-    dragging.current = false;
-    const snap = await widgetSnap();
-    suspend(false);
-    if (!snap) return;
-    const patch: Partial<Settings> = { corner: snap.corner };
-    if (snap.movedScreen) patch.followCursorScreen = false;
-    dispatch({ type: "settings/update", patch });
-  }, [dispatch, suspend]);
-  useEffect(
-    () =>
-      onWidgetMoved(() => {
-        if (!dragging.current) return;
-        dragMoved.current = true;
-        window.clearTimeout(dragEnd.current);
-        dragEnd.current = window.setTimeout(() => void finishDrag(), 350);
-      }),
-    [finishDrag],
-  );
-  const beginDrag = (e: React.MouseEvent) => {
-    if (open || e.button !== 0) return;
-    e.preventDefault();
-    dragging.current = true;
-    dragMoved.current = false;
-    suspend(true);
-    void startWidgetDrag().then(() =>
-      window.setTimeout(() => {
-        // Simple clic sans déplacement : on rend la main au survol.
-        if (dragging.current && !dragMoved.current) {
-          dragging.current = false;
-          suspend(false);
+  // Widget replié, bouton enfoncé (D-040, D-041) :
+  // - glissé : il s'aimante à la position la plus proche (coin ou milieu d'un bord) ; posé sur
+  //   un autre écran, il y reste : le suivi de l'écran du curseur est coupé ;
+  // - simple clic : il s'ouvre, épinglé, jusqu'au prochain clic à l'extérieur.
+  const pressing = useRef(false);
+  const press = useCallback(
+    async (e: React.MouseEvent) => {
+      if (open || e.button !== 0 || pressing.current) return;
+      e.preventDefault();
+      pressing.current = true;
+      suspend(true);
+      try {
+        if ((await pressWidget()) === "click") {
+          pin();
+          void focusWidget();
+          return;
         }
-      }, 400),
-    );
-  };
+        const snap = await widgetSnap();
+        if (!snap) return;
+        const patch: Partial<Settings> = { corner: snap.corner };
+        if (snap.movedScreen) patch.followCursorScreen = false;
+        dispatch({ type: "settings/update", patch });
+      } finally {
+        pressing.current = false;
+        suspend(false);
+      }
+    },
+    [dispatch, open, pin, suspend],
+  );
 
   // Pétales en attente (fin de focus pendant que le widget était replié) : au prochain déploiement.
   useEffect(() => {
@@ -283,7 +280,7 @@ function WidgetReady({ data }: { data: DataFile }) {
       ref={card}
       className={[
         styles.card,
-        CORNER_CLASS[corner],
+        anchorClass(corner),
         open && expandedFrame ? styles.open : "",
         isBreak ? styles.break : "",
       ].join(" ")}
@@ -295,8 +292,8 @@ function WidgetReady({ data }: { data: DataFile }) {
       <div
         className={styles.compact}
         aria-hidden={open}
-        onMouseDown={beginDrag}
-        title="Glisser pour déplacer le widget"
+        onMouseDown={(e) => void press(e)}
+        title="Cliquer pour ouvrir · glisser pour déplacer"
       >
         <div className={styles.miniEnso}>{enso}</div>
         <div className={styles.compactText}>

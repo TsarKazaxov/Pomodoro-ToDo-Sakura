@@ -19,21 +19,27 @@
     height 0.26s var(--ease),
     background-color 0.3s var(--ease);
 }
-.tr {
+/* Position (D-041) : un axe vertical (haut, milieu, bas) et un horizontal (gauche, centre,
+   droite). Centrée sur un bord, la carte grandit des deux côtés. */
+.vt {
   top: 10px;
-  right: 10px;
 }
-.tl {
-  top: 10px;
+.vb {
+  bottom: 10px;
+}
+.vm {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.hl {
   left: 10px;
 }
-.br {
-  bottom: 10px;
+.hr {
   right: 10px;
 }
-.bl {
-  bottom: 10px;
-  left: 10px;
+.hc {
+  left: 50%;
+  transform: translateX(-50%);
 }
 .open {
   width: 360px;
@@ -54,17 +60,18 @@
   top: 0;
   transition: opacity 0.2s var(--ease);
 }
-.tr .compact,
-.br .compact,
-.tr .expanded,
-.br .expanded {
+.hr .compact,
+.hr .expanded {
   right: 0;
 }
-.tl .compact,
-.bl .compact,
-.tl .expanded,
-.bl .expanded {
+.hl .compact,
+.hl .expanded {
   left: 0;
+}
+.hc .compact,
+.hc .expanded {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* ---------- compact ---------- */
@@ -147,12 +154,11 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sakura) 30%, transparent);
   z-index: 2;
 }
-.tr .pending,
-.br .pending {
+.hr .pending {
   left: 8px;
 }
-.tl .pending,
-.bl .pending {
+.hl .pending,
+.hc .pending {
   right: 8px;
 }
 
@@ -452,7 +458,7 @@
 
 /* ---------- déplacer, réduire (D-039, D-040) ---------- */
 .compact {
-  cursor: grab;
+  cursor: pointer;
 }
 .compact:active {
   cursor: grabbing;

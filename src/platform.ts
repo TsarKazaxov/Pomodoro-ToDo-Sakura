@@ -120,23 +120,49 @@ export const setFollowScreen = (enabled: boolean) => call("set_follow_screen", {
 
 // ---------- déplacer le widget (D-040) ----------
 
-/** Lance le glisser natif de la fenêtre widget (bouton de la souris enfoncé). */
-export async function startWidgetDrag(): Promise<void> {
-  if (!inTauri) return;
-  await call("widget_drag_start");
+const PRESS_POLL_MS = 40;
+const PRESS_MAX_MS = 60_000;
+
+/**
+ * Bouton enfoncé sur le widget replié : lance le glisser natif de la fenêtre, puis attend que le
+ * bouton soit relâché. Renvoie « drag » si la fenêtre a bougé, « click » sinon (D-041).
+ * Le glisser natif avale le relâchement : on interroge l'état du bouton côté macOS.
+ */
+export async function pressWidget(): Promise<"drag" | "click"> {
+  if (!inTauri) {
+    await new Promise((r) => document.addEventListener("mouseup", r, { once: true }));
+    return "click";
+  }
   const { getCurrentWindow } = await import("@tauri-apps/api/window");
-  await getCurrentWindow()
-    .startDragging()
-    .catch((e) => console.error("startDragging", e));
+  const win = getCurrentWindow();
+  let moved = false;
+  const unlisten = await win.onMoved(() => {
+    moved = true;
+  });
+  try {
+    await call("widget_drag_start");
+    void win.startDragging().catch((e) => console.error("startDragging", e));
+    const t0 = Date.now();
+    while (Date.now() - t0 < PRESS_MAX_MS) {
+      await new Promise((r) => window.setTimeout(r, PRESS_POLL_MS));
+      const down = await invoke<boolean>("mouse_pressed").catch(() => false);
+      if (!down) break;
+    }
+    // Dernier événement « moved » éventuel, émis juste avant le relâchement.
+    await new Promise((r) => window.setTimeout(r, PRESS_POLL_MS));
+    return moved ? "drag" : "click";
+  } finally {
+    unlisten();
+  }
 }
 
-/** Appelé à chaque déplacement de la fenêtre widget. Renvoie la désinscription. */
-export function onWidgetMoved(cb: () => void): () => void {
-  if (!inTauri) return () => {};
-  const p = import("@tauri-apps/api/window").then(({ getCurrentWindow }) =>
-    getCurrentWindow().onMoved(cb),
-  );
-  return () => void p.then((un) => un());
+/** Donne le focus au widget : un clic ailleurs le fera alors se replier (D-041). */
+export async function focusWidget(): Promise<void> {
+  if (!inTauri) return;
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  await getCurrentWindow()
+    .setFocus()
+    .catch((e) => console.error("setFocus", e));
 }
 
 /** Aimante le widget au coin le plus proche de l'écran où il a été lâché. */

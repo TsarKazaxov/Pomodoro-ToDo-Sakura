@@ -115,7 +115,7 @@ export function SettingsTab({ data }: { data: DataFile }) {
       <fieldset className={styles.fieldset}>
         <legend>Widget</legend>
         <div className={styles.settingRow}>
-          <span>Coin de l'écran</span>
+          <span>Position du widget</span>
           <CornerPicker value={s.corner} onChange={(corner) => set({ corner })} />
         </div>
         <div className={styles.settingRow}>
@@ -350,26 +350,36 @@ function NumberRow(props: {
 }
 
 const CORNER_LABEL: Record<Corner, string> = {
-  "top-left": "Haut gauche",
-  "top-right": "Haut droite",
-  "bottom-left": "Bas gauche",
-  "bottom-right": "Bas droite",
+  "top-left": "En haut à gauche",
+  "top-center": "En haut au centre",
+  "top-right": "En haut à droite",
+  "middle-left": "Au milieu à gauche",
+  "middle-right": "Au milieu à droite",
+  "bottom-left": "En bas à gauche",
+  "bottom-center": "En bas au centre",
+  "bottom-right": "En bas à droite",
 };
 
+/** Grille 3 × 3 de l'écran ; la case centrale est vide (le widget masquerait le travail). */
 export function CornerPicker({ value, onChange }: { value: Corner; onChange(c: Corner): void }) {
+  const cells: (Corner | null)[] = [...CORNERS.slice(0, 4), null, ...CORNERS.slice(4)];
   return (
-    <div className={styles.cornerPick} role="group" aria-label="Coin de l'écran">
-      {CORNERS.map((c) => (
-        <button
-          key={c}
-          type="button"
-          data-corner={c}
-          aria-label={CORNER_LABEL[c]}
-          title={CORNER_LABEL[c]}
-          aria-pressed={value === c}
-          onClick={() => onChange(c)}
-        />
-      ))}
+    <div className={styles.cornerPick} role="group" aria-label="Position du widget">
+      {cells.map((c) =>
+        c ? (
+          <button
+            key={c}
+            type="button"
+            data-corner={c}
+            aria-label={CORNER_LABEL[c]}
+            title={CORNER_LABEL[c]}
+            aria-pressed={value === c}
+            onClick={() => onChange(c)}
+          />
+        ) : (
+          <span key="center" aria-hidden="true" />
+        ),
+      )}
     </div>
   );
 }

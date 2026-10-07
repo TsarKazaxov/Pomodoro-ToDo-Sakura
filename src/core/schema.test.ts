@@ -32,6 +32,18 @@ describe("schéma", () => {
     expect(r.ok && [r.data.settings.focusMinutes, r.data.settings.soundVolume]).toEqual([25, 1]);
   });
 
+  it("accepte les positions au milieu des bords, refuse le centre de l'écran", () => {
+    const d = JSON.parse(serialize(createEmptyData("mac-a", T0)));
+    for (const corner of ["top-center", "bottom-center", "middle-left", "middle-right"]) {
+      d.settings.corner = corner;
+      const r = parseDataFile(JSON.stringify(d));
+      expect(r.ok && r.data.settings.corner).toBe(corner);
+    }
+    d.settings.corner = "middle-center";
+    const r = parseDataFile(JSON.stringify(d));
+    expect(r.ok && r.data.settings.corner).toBe("top-right");
+  });
+
   it("un minuteur illisible repart à l'arrêt sans bloquer le fichier", () => {
     const d = JSON.parse(serialize(createEmptyData("mac-a", T0)));
     d.timer = { phase: "focus", startedAt: "pas un nombre" };
