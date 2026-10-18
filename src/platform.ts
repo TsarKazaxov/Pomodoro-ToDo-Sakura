@@ -161,23 +161,35 @@ export async function pressWidget(): Promise<"drag" | "click"> {
  * d'inactivité système est relevé chaque seconde ; aucune frappe n'est lue, seulement l'instant
  * de la dernière. Dans l'aperçu navigateur : les événements de la page.
  */
+let lastInput: number | null = null;
+let watching = false;
+
 export function watchActivity(): () => number | null {
-  let last: number | null = null;
-  if (!inTauri) {
-    const seen = () => (last = Date.now());
-    for (const ev of ["mousemove", "mousedown", "keydown", "wheel"])
-      window.addEventListener(ev, seen, { passive: true });
-    return () => last;
+  if (!watching) {
+    watching = true;
+    if (!inTauri) {
+      const seen = () => (lastInput = Date.now());
+      for (const ev of ["mousemove", "mousedown", "keydown", "wheel"])
+        window.addEventListener(ev, seen, { passive: true });
+    } else {
+      window.setInterval(() => {
+        void invoke<number | null>("idle_seconds")
+          .then((s) => {
+            lastInput = s === null ? null : Date.now() - s * 1000;
+          })
+          .catch(() => (lastInput = null));
+      }, 1000);
+    }
   }
-  window.setInterval(() => {
-    void invoke<number | null>("idle_seconds")
-      .then((s) => {
-        last = s === null ? null : Date.now() - s * 1000;
-      })
-      .catch(() => (last = null));
-  }, 1000);
-  return () => last;
+  return lastInputAt;
 }
+
+/** Dernière activité clavier ou souris connue (voir `watchActivity`). */
+export const lastInputAt = () => lastInput;
+
+/** Voix de Rai (D-044) : chaque partie dans sa langue, à la suite. */
+export const speak = (parts: { text: string; lang: string }[], volume: number) =>
+  call("speak", { parts, volume });
 
 /** Donne le focus au widget : un clic ailleurs le fera alors se replier (D-041). */
 export async function focusWidget(): Promise<void> {

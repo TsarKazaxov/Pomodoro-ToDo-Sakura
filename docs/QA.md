@@ -80,6 +80,16 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] En prolongation, « Faire la pause » → la pause de 5 min démarre tout de suite.
 - [ ] Ne touche à rien à la fin du focus → la pause démarre comme avant.
 
+**Rai (V1.1.0)**
+- [ ] Rai apparaît à côté du widget ; en haut au centre, la fiche est sous lui ; sur le bord gauche, il regarde vers l'écran.
+- [ ] Minuteur arrêté 2 min en bougeant la souris : il s'impatiente et le dit (japonais puis français, à l'écrit et à voix haute).
+- [ ] Focus : il travaille au clavier. 3 min sans toucher à rien : il s'endort (Zzz, bulle de morve). Bouge la souris : il sursaute, « J'dormais pas ! ».
+- [ ] 10 min de focus actif (ou prolongation) : transformation dorée.
+- [ ] Coche une tâche : saut de victoire. Fin de focus : il brandit le réveil.
+- [ ] Clic sur Rai : il te taquine. Curseur immobile 2 s sur lui pendant un focus : il file de l'autre côté.
+- [ ] Réglages → Rai : voix coupée → plus de son ; langue English → répliques en anglais ; Aucune → japonais seul ; mode discret → silence pendant le focus.
+- [ ] Moniteur d'activité, focus en cours : CPU toujours < 2 %.
+
 **Raccourcis et menu**
 - [ ] ⌥⌘P démarre / suspend ; ⌥⌘N ouvre le widget avec le curseur dans l'ajout rapide ; ⌥⌘S ouvre la vue complète.
 - [ ] Barre de menu → Quitter : la tâche ajoutée juste avant est toujours là au relancement.

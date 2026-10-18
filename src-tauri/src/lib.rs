@@ -3,6 +3,7 @@ mod macos;
 mod shortcuts;
 mod store;
 mod tray;
+mod voice;
 mod widget;
 
 use tauri::Manager;
@@ -37,6 +38,8 @@ pub fn run() {
             widget::widget_snap,
             widget::mouse_pressed,
             widget::idle_seconds,
+            voice::speak,
+            voice::stop_speaking,
             tray::tray_update,
             tray::quit_app,
         ])

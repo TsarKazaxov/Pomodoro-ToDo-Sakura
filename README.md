@@ -2,7 +2,7 @@
 
 Minuteur Pomodoro, tâches du jour et heatmap d'effort, dans une petite fenêtre toujours visible sur macOS.
 
-- **Widget** dans un coin de l'écran ou au milieu d'un bord : un ensō qui se dessine pendant le focus, la tâche en cours, tes priorités du jour, ta mini heatmap. Il se déploie quand tu poses le curseur dessus ou quand tu cliques dessus ; un clic à l'extérieur le referme. Glisse-le pour le déplacer. Neko, un chat en pixel art, y vit au rythme du minuteur.
+- **Widget** dans un coin de l'écran ou au milieu d'un bord : un ensō qui se dessine pendant le focus, la tâche en cours, tes priorités du jour, ta mini heatmap. Il se déploie quand tu poses le curseur dessus ou quand tu cliques dessus ; un clic à l'extérieur le referme. Glisse-le pour le déplacer. Rai, une mascotte manga, vit à côté : il travaille quand tu travailles, s'endort quand tu décroches, se transforme quand tu enchaînes, et commente le tout en japonais puis en français (ou en anglais), à l'écrit et à voix haute.
 - **Prolongation** : si tu travailles encore quand le focus se termine, il continue de compter (« +mm:ss ») ; la pause démarre quand tu lâches clavier et souris 2 min, ou quand tu cliques « Faire la pause ».
 - **Tâches** avec une taille T-shirt (XS à XL) : ajoute-les en une ligne, `Relire la spec #M`.
 - **Activité** : une heatmap façon GitHub remplie par l'effort accompli (les points des tâches terminées), et la **calibration** : est-ce que tes M prennent vraiment 4 pomodoros ?

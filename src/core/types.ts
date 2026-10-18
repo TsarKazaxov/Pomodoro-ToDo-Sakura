@@ -67,6 +67,9 @@ export const CORNERS: readonly Corner[] = [
   "bottom-right",
 ];
 
+export type CompanionLang = "fr" | "en" | "none";
+export const COMPANION_LANGS: readonly CompanionLang[] = ["fr", "en", "none"];
+
 export type Theme = "auto" | "light" | "dark";
 export const THEMES: readonly Theme[] = ["auto", "light", "dark"];
 
@@ -86,8 +89,18 @@ export interface Settings {
   followCursorScreen: boolean;
   /** Fin de focus pendant que tu travailles : le focus se prolonge, la pause attend (D-042). */
   extendWhileActive: boolean;
-  /** Neko, le compagnon pixel dans l'ensō (D-043). */
+  /** Rai, la mascotte à côté du widget (D-044). */
   showCompanion: boolean;
+  /** Bulles de Rai : japonais, puis la traduction. */
+  companionBubbles: boolean;
+  /** Voix de Rai (voix de macOS). */
+  companionVoice: boolean;
+  /** Langue de la traduction, à l'écrit comme à l'oral. */
+  companionLang: CompanionLang;
+  /** Japonais en premier (sinon : la traduction seule). */
+  companionJapanese: boolean;
+  /** Aucune bulle ni voix pendant un focus, sauf à la fin. */
+  companionDiscreet: boolean;
   /** Premier lancement terminé. */
   onboarded: boolean;
 }

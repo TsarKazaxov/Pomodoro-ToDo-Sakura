@@ -32,10 +32,10 @@ import { flush, onReward, useSakura, type Reward } from "../state/store";
 import { Enso } from "../ui/Enso";
 import { formatClock } from "../ui/format";
 import { Heatmap } from "../ui/Heatmap";
-import { Neko } from "../ui/Neko";
-import type { Mood } from "../ui/nekoSprite";
 import { useNow } from "../ui/hooks";
 import { spawnPetals } from "../ui/petals";
+import { Rai, RAI_SIZE } from "./Rai";
+import { useCompanion } from "./useCompanion";
 import { useHoverExpand } from "./useHoverExpand";
 import styles from "./Widget.module.css";
 
@@ -43,6 +43,52 @@ import styles from "./Widget.module.css";
 export const SHADOW_MARGIN = 10;
 export const COMPACT = { w: 240, h: 64 };
 export const EXPANDED = { w: 360, h: 520 };
+/** Fiche repliée quand Rai parle : la réplique prend la place du minuteur (D-044). */
+export const TALK_H = 88;
+const RAI_GAP = 4;
+
+/**
+ * Disposition de Rai et de la fiche (D-044) : au milieu d'un bord haut ou bas, la fiche passe
+ * sous (ou au-dessus de) Rai ; partout ailleurs, à côté de lui, du côté de l'écran.
+ */
+export function companionLayout(corner: Corner, open: boolean, rai: boolean) {
+  const [v = "top", h = "right"] = corner.split("-");
+  const card = open ? EXPANDED : { w: COMPACT.w, h: rai ? TALK_H : COMPACT.h };
+  const m = SHADOW_MARGIN;
+  const off = RAI_SIZE + RAI_GAP + m;
+  if (!rai) return { frame: { w: card.w + 2 * m, h: card.h + 2 * m }, card: {}, rai: {} };
+  const stacked = h === "center";
+  const frame = stacked
+    ? { w: Math.max(RAI_SIZE, card.w) + 2 * m, h: RAI_SIZE + RAI_GAP + card.h + 2 * m }
+    : { w: RAI_SIZE + RAI_GAP + card.w + 2 * m, h: Math.max(RAI_SIZE, card.h) + 2 * m };
+  const cardPos: React.CSSProperties = stacked
+    ? v === "bottom"
+      ? { bottom: off }
+      : { top: off }
+    : h === "left"
+      ? { left: off }
+      : { right: off };
+  const raiPos: React.CSSProperties = {
+    ...(h === "left"
+      ? { left: m }
+      : h === "right"
+        ? { right: m }
+        : { left: `calc(50% - ${RAI_SIZE / 2}px)` }),
+    ...(v === "top"
+      ? { top: m }
+      : v === "bottom"
+        ? { bottom: m }
+        : { top: `calc(50% - ${RAI_SIZE / 2}px)` }),
+  };
+  return { frame, card: cardPos, rai: raiPos };
+}
+
+/** Rai file de l'autre côté quand il gêne (D-044). */
+export function mirrorCorner(corner: Corner): Corner {
+  const [v, h] = corner.split("-");
+  if (h === "center") return `${v === "top" ? "bottom" : "top"}-center` as Corner;
+  return `${v}-${h === "left" ? "right" : "left"}` as Corner;
+}
 const RESIZE_MS = 260;
 
 const V_CLASS: Record<string, string | undefined> = {
@@ -101,32 +147,28 @@ function WidgetReady({ data }: { data: DataFile }) {
   const corner = data.settings.corner;
   const openRef = useRef(open);
   openRef.current = open;
+  const showRai = data.settings.showCompanion;
+  const rai = useCompanion(data, now);
 
   // Fenêtre : on l'agrandit avant l'animation d'ouverture, on la réduit après celle de fermeture.
   useLayoutEffect(() => {
     let cancelled = false;
     let t: number | undefined;
     if (open) {
-      void widgetLayout(
-        corner,
-        EXPANDED.w + 2 * SHADOW_MARGIN,
-        EXPANDED.h + 2 * SHADOW_MARGIN,
-      ).then(() => {
+      const f = companionLayout(corner, true, showRai).frame;
+      void widgetLayout(corner, f.w, f.h).then(() => {
         if (!cancelled) setExpandedFrame(true);
       });
     } else {
       setExpandedFrame(false);
-      t = window.setTimeout(
-        () =>
-          void widgetLayout(corner, COMPACT.w + 2 * SHADOW_MARGIN, COMPACT.h + 2 * SHADOW_MARGIN),
-        RESIZE_MS,
-      );
+      const f = companionLayout(corner, false, showRai).frame;
+      t = window.setTimeout(() => void widgetLayout(corner, f.w, f.h), RESIZE_MS);
     }
     return () => {
       cancelled = true;
       window.clearTimeout(t);
     };
-  }, [open, corner]);
+  }, [open, corner, showRai]);
 
   // Widget replié, bouton enfoncé (D-040, D-041) :
   // - glissé : il s'aimante à la position la plus proche (coin ou milieu d'un bord) ; posé sur
@@ -134,15 +176,14 @@ function WidgetReady({ data }: { data: DataFile }) {
   // - simple clic : il s'ouvre, épinglé, jusqu'au prochain clic à l'extérieur.
   const pressing = useRef(false);
   const press = useCallback(
-    async (e: React.MouseEvent) => {
+    async (e: React.MouseEvent, onClick: () => void) => {
       if (open || e.button !== 0 || pressing.current) return;
       e.preventDefault();
       pressing.current = true;
       suspend(true);
       try {
         if ((await pressWidget()) === "click") {
-          pin();
-          void focusWidget();
+          onClick();
           return;
         }
         const snap = await widgetSnap();
@@ -155,8 +196,33 @@ function WidgetReady({ data }: { data: DataFile }) {
         suspend(false);
       }
     },
-    [dispatch, open, pin, suspend],
+    [dispatch, open, suspend],
   );
+  const openByClick = useCallback(() => {
+    pin();
+    void focusWidget();
+  }, [pin]);
+
+  // Rai : un clic le taquine ; le curseur qui s'attarde sur lui pendant un focus le fait filer.
+  const pushRai = rai.push;
+  const linger = useRef<number | undefined>(undefined);
+  const onRaiDown = (e: React.MouseEvent) => {
+    window.clearTimeout(linger.current);
+    if (open) pushRai({ type: "poke" });
+    else void press(e, () => pushRai({ type: "poke" }));
+  };
+  const onRaiEnter = () => {
+    window.clearTimeout(linger.current);
+    linger.current = window.setTimeout(() => {
+      if (openRef.current || pressing.current || data.timer.phase !== "focus") return;
+      pushRai({ type: "linger" });
+      window.setTimeout(
+        () => dispatch({ type: "settings/update", patch: { corner: mirrorCorner(corner) } }),
+        750,
+      );
+    }, 2_000);
+  };
+  const onRaiLeave = () => window.clearTimeout(linger.current);
 
   // Pétales en attente (fin de focus pendant que le widget était replié) : au prochain déploiement.
   useEffect(() => {
@@ -198,6 +264,10 @@ function WidgetReady({ data }: { data: DataFile }) {
   useEffect(
     () =>
       onReward((r: Reward) => {
+        // La prolongation, elle, se lit dans l'état du minuteur (forme super).
+        if (r.kind === "task") pushRai({ type: "taskDone" });
+        else if (r.kind === "focus") pushRai({ type: "focusEnd" });
+        else if (r.kind === "break") pushRai({ type: "breakEnd" });
         if (r.kind === "focus") {
           if (openRef.current) petalsInCard(24);
           else {
@@ -226,7 +296,7 @@ function WidgetReady({ data }: { data: DataFile }) {
           window.setTimeout(() => setBloom(false), 1100);
         }
       }),
-    [],
+    [pushRai],
   );
 
   function petalsInCard(count: number) {
@@ -267,18 +337,6 @@ function WidgetReady({ data }: { data: DataFile }) {
           : overtime
             ? fr.phase.overtime
             : fr.phase.focus;
-  const mood: Mood =
-    t.phase === "idle"
-      ? "sleep"
-      : paused
-        ? "wait"
-        : isBreak
-          ? "tea"
-          : overtime
-            ? "overtime"
-            : "work";
-  const tick = Math.floor(now / 1000);
-  const neko = data.settings.showCompanion;
   const pillClass =
     t.phase === "idle" || paused ? "" : isBreak ? styles.pillBreak : styles.pillFocus;
   const cycle = data.settings.focusesBeforeLongBreak;
@@ -308,201 +366,235 @@ function WidgetReady({ data }: { data: DataFile }) {
     <Enso progress={progress(t, d, now)} tone={isBreak ? "sakura" : "ink"} bloom={bloom} />
   );
 
+  const layout = companionLayout(corner, open && expandedFrame, showRai);
+  const speech = showRai && data.settings.companionBubbles ? rai.speech : null;
+  const talking = !!speech && !open;
+  const [, hSide] = corner.split("-");
+
   return (
-    <div
-      ref={card}
-      className={[
-        styles.card,
-        anchorClass(corner),
-        open && expandedFrame ? styles.open : "",
-        isBreak ? styles.break : "",
-      ].join(" ")}
-      {...handlers}
-      onBlur={handlers.onBlur}
-    >
-      {pending && <span className={styles.pending} aria-label="Focus terminé" />}
-
-      <div
-        className={styles.compact}
-        aria-hidden={open}
-        onMouseDown={(e) => void press(e)}
-        title="Cliquer pour ouvrir · glisser pour déplacer"
-      >
-        <div className={styles.miniEnso}>
-          {enso}
-          {neko && <Neko mood={mood} tick={tick} className={styles.miniNeko} />}
-        </div>
-        <div className={styles.compactText}>
-          <div className={styles.time}>{time}</div>
-          <div className={styles.task}>{taskLine}</div>
-        </div>
-        <span className={`${styles.pill} ${pillClass}`}>{pill}</span>
-      </div>
-
-      {/* Partie déployée montée seulement quand elle sert : replié, le widget ne met à jour
-          que la ligne compacte chaque seconde (D-036). */}
-      {open && (
-        <div className={styles.expanded} aria-hidden={!open}>
-          <button
-            className={styles.collapse}
-            onClick={collapse}
-            aria-label="Réduire"
-            title="Réduire (Échap)"
-          >
-            <svg
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M4 8h8" />
-            </svg>
-          </button>
-          <div className={styles.timer}>
-            <div className={styles.bigEnso}>
-              {enso}
-              <div className={styles.bigTime}>
-                {neko && <Neko mood={mood} tick={tick} className={styles.bigNeko} />}
-                {time}
-              </div>
-            </div>
-            <div className={styles.side}>
-              <span className={`${styles.pill} ${pillClass}`}>{pill}</span>
-              <div className={styles.phaseLine}>{phaseLine}</div>
-              <div className={styles.ctrls}>
-                <button
-                  className={`${styles.btn} ${styles.primary}`}
-                  onClick={() => dispatch({ type: "timer/toggle" })}
-                >
-                  {toggleLabel}
-                </button>
-                <button className={styles.btn} onClick={() => dispatch({ type: "timer/skip" })}>
-                  {fr.skip}
-                </button>
-                <button
-                  className={`${styles.btn} ${styles.icon}`}
-                  onClick={() => dispatch({ type: "timer/reset" })}
-                  aria-label={fr.reset}
-                  title={fr.reset}
-                >
-                  <svg
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M2.5 8a5.5 5.5 0 1 0 1.7-4" />
-                    <path d="M2.3 1.8v3h3" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className={styles.sectionTitle}>{fr.currentTask}</h3>
-            <select
-              className={styles.select}
-              value={cur?.id ?? ""}
-              onChange={(e) => dispatch({ type: "task/setCurrent", id: e.target.value || null })}
-              aria-label={fr.currentTask}
-            >
-              <option value="">{fr.freeFocus}</option>
-              {choices.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.title} · {x.size}
-                </option>
-              ))}
-            </select>
-            {cur ? (
-              <Dots
-                spent={cur.pomodorosSpent}
-                expected={data.settings.scale[cur.size].expectedPomodoros}
-                xl={cur.size === "XL"}
-              />
-            ) : (
-              <p className={styles.hintMuted}>{fr.freeFocusHint}</p>
-            )}
-            {cur && shouldSplit(cur, data.settings.scale) && (
-              <p className={styles.hint}>{fr.splitHint}</p>
-            )}
-          </div>
-
-          <div className={styles.prioBlock}>
-            <div className={styles.sectionRow}>
-              <h3 className={styles.sectionTitle}>{fr.priorities}</h3>
-              {prio.length > 0 && <span className={styles.count}>{fr.pinned(prio.length)}</span>}
-            </div>
-            {open3.length === 0 ? (
-              <p className={styles.empty}>
-                {fr.noPriority} <code>{fr.quickAddExample}</code>.
-              </p>
-            ) : (
-              <ul className={styles.prio}>
-                {open3.map((x) => (
-                  <li key={x.id}>
-                    <input
-                      type="checkbox"
-                      className={styles.tick}
-                      checked={false}
-                      onChange={() =>
-                        dispatch({ type: "task/setStatus", id: x.id, status: "done" })
-                      }
-                      aria-label={fr.complete(x.title)}
-                    />
-                    <span className={styles.prioTitle} title={x.title}>
-                      {x.title}
-                    </span>
-                    <span className={`${styles.size} ${x.size === "XL" ? styles.xl : ""}`}>
-                      {x.size}
-                    </span>
-                  </li>
-                ))}
-                {prio.length > 3 && <li className={styles.more}>{fr.more(prio.length - 3)}</li>}
-              </ul>
-            )}
-            <input
-              ref={quickInput}
-              className={styles.quick}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && draft.trim()) {
-                  dispatch({ type: "task/quickAdd", raw: draft, priority: true });
-                  setDraft("");
-                } else if (e.key === "Escape") {
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
-              placeholder={fr.quickAddPlaceholder}
-              aria-label={fr.quickAddPlaceholder}
-            />
-          </div>
-
-          <div className={styles.heatRow}>
-            <Heatmap data={data} today={today} weeks={12} />
-            <div className={styles.todayPts}>
-              <b key={pop} className={pop ? styles.popped : undefined}>
-                {todayPoints}
-              </b>
-              <span>{fr.todayPoints}</span>
-            </div>
-            {comboVisible(combo, now) && (
-              <span className={styles.combo}>{fr.combo(combo.count)}</span>
-            )}
-          </div>
-
-          <button className={styles.openLink} onClick={() => void showMain()}>
-            {fr.open}
-          </button>
-        </div>
+    <>
+      {showRai && (
+        <Rai
+          pose={rai.pose}
+          flip={hSide === "left"}
+          style={layout.rai}
+          onMouseDown={onRaiDown}
+          onMouseEnter={onRaiEnter}
+          onMouseLeave={onRaiLeave}
+        />
       )}
-    </div>
+      <div
+        ref={card}
+        className={[
+          styles.card,
+          anchorClass(corner),
+          open && expandedFrame ? styles.open : "",
+          talking ? styles.talk : "",
+          isBreak ? styles.break : "",
+        ].join(" ")}
+        style={layout.card}
+        {...handlers}
+        onBlur={handlers.onBlur}
+      >
+        {pending && <span className={styles.pending} aria-label="Focus terminé" />}
+
+        {talking && speech && (
+          <div
+            className={styles.speech}
+            onMouseDown={(e) => void press(e, openByClick)}
+            aria-live="polite"
+            lang="ja"
+          >
+            {data.settings.companionJapanese && (
+              <span className={styles.ja}>
+                {speech.ja}
+                <small className={styles.romaji}>{speech.romaji}</small>
+              </span>
+            )}
+            {speech.text && (
+              <span className={styles.tr} lang={data.settings.companionLang}>
+                {speech.text}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div
+          className={styles.compact}
+          aria-hidden={open || talking}
+          onMouseDown={(e) => void press(e, openByClick)}
+          title="Cliquer pour ouvrir · glisser pour déplacer"
+        >
+          <div className={styles.miniEnso}>{enso}</div>
+          <div className={styles.compactText}>
+            <div className={styles.time}>{time}</div>
+            <div className={styles.task}>{taskLine}</div>
+          </div>
+          <span className={`${styles.pill} ${pillClass}`}>{pill}</span>
+        </div>
+
+        {/* Partie déployée montée seulement quand elle sert : replié, le widget ne met à jour
+          que la ligne compacte chaque seconde (D-036). */}
+        {open && (
+          <div className={styles.expanded} aria-hidden={!open}>
+            <button
+              className={styles.collapse}
+              onClick={collapse}
+              aria-label="Réduire"
+              title="Réduire (Échap)"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M4 8h8" />
+              </svg>
+            </button>
+            <div className={styles.timer}>
+              <div className={styles.bigEnso}>
+                {enso}
+                <div className={styles.bigTime}>{time}</div>
+              </div>
+              <div className={styles.side}>
+                <span className={`${styles.pill} ${pillClass}`}>{pill}</span>
+                <div className={styles.phaseLine}>{phaseLine}</div>
+                <div className={styles.ctrls}>
+                  <button
+                    className={`${styles.btn} ${styles.primary}`}
+                    onClick={() => dispatch({ type: "timer/toggle" })}
+                  >
+                    {toggleLabel}
+                  </button>
+                  <button className={styles.btn} onClick={() => dispatch({ type: "timer/skip" })}>
+                    {fr.skip}
+                  </button>
+                  <button
+                    className={`${styles.btn} ${styles.icon}`}
+                    onClick={() => dispatch({ type: "timer/reset" })}
+                    aria-label={fr.reset}
+                    title={fr.reset}
+                  >
+                    <svg
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M2.5 8a5.5 5.5 0 1 0 1.7-4" />
+                      <path d="M2.3 1.8v3h3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className={styles.sectionTitle}>{fr.currentTask}</h3>
+              <select
+                className={styles.select}
+                value={cur?.id ?? ""}
+                onChange={(e) => dispatch({ type: "task/setCurrent", id: e.target.value || null })}
+                aria-label={fr.currentTask}
+              >
+                <option value="">{fr.freeFocus}</option>
+                {choices.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.title} · {x.size}
+                  </option>
+                ))}
+              </select>
+              {cur ? (
+                <Dots
+                  spent={cur.pomodorosSpent}
+                  expected={data.settings.scale[cur.size].expectedPomodoros}
+                  xl={cur.size === "XL"}
+                />
+              ) : (
+                <p className={styles.hintMuted}>{fr.freeFocusHint}</p>
+              )}
+              {cur && shouldSplit(cur, data.settings.scale) && (
+                <p className={styles.hint}>{fr.splitHint}</p>
+              )}
+            </div>
+
+            <div className={styles.prioBlock}>
+              <div className={styles.sectionRow}>
+                <h3 className={styles.sectionTitle}>{fr.priorities}</h3>
+                {prio.length > 0 && <span className={styles.count}>{fr.pinned(prio.length)}</span>}
+              </div>
+              {open3.length === 0 ? (
+                <p className={styles.empty}>
+                  {fr.noPriority} <code>{fr.quickAddExample}</code>.
+                </p>
+              ) : (
+                <ul className={styles.prio}>
+                  {open3.map((x) => (
+                    <li key={x.id}>
+                      <input
+                        type="checkbox"
+                        className={styles.tick}
+                        checked={false}
+                        onChange={() =>
+                          dispatch({ type: "task/setStatus", id: x.id, status: "done" })
+                        }
+                        aria-label={fr.complete(x.title)}
+                      />
+                      <span className={styles.prioTitle} title={x.title}>
+                        {x.title}
+                      </span>
+                      <span className={`${styles.size} ${x.size === "XL" ? styles.xl : ""}`}>
+                        {x.size}
+                      </span>
+                    </li>
+                  ))}
+                  {prio.length > 3 && <li className={styles.more}>{fr.more(prio.length - 3)}</li>}
+                </ul>
+              )}
+              <input
+                ref={quickInput}
+                className={styles.quick}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && draft.trim()) {
+                    dispatch({ type: "task/quickAdd", raw: draft, priority: true });
+                    setDraft("");
+                  } else if (e.key === "Escape") {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                placeholder={fr.quickAddPlaceholder}
+                aria-label={fr.quickAddPlaceholder}
+              />
+            </div>
+
+            <div className={styles.heatRow}>
+              <Heatmap data={data} today={today} weeks={12} />
+              <div className={styles.todayPts}>
+                <b key={pop} className={pop ? styles.popped : undefined}>
+                  {todayPoints}
+                </b>
+                <span>{fr.todayPoints}</span>
+              </div>
+              {comboVisible(combo, now) && (
+                <span className={styles.combo}>{fr.combo(combo.count)}</span>
+              )}
+            </div>
+
+            <button className={styles.openLink} onClick={() => void showMain()}>
+              {fr.open}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

@@ -7,6 +7,7 @@
 import { initialTimer } from "./timer";
 import { toLocalIso } from "./time";
 import {
+  COMPANION_LANGS,
   CORNERS,
   PHASE_TYPES,
   SIZES,
@@ -45,6 +46,11 @@ export function defaultSettings(): Settings {
     followCursorScreen: true,
     extendWhileActive: true,
     showCompanion: true,
+    companionBubbles: true,
+    companionVoice: true,
+    companionLang: "fr",
+    companionJapanese: true,
+    companionDiscreet: false,
     onboarded: false,
   };
 }
@@ -180,6 +186,14 @@ function readSettings(v: unknown): Settings {
     extendWhileActive:
       typeof v.extendWhileActive === "boolean" ? v.extendWhileActive : d.extendWhileActive,
     showCompanion: typeof v.showCompanion === "boolean" ? v.showCompanion : d.showCompanion,
+    companionBubbles:
+      typeof v.companionBubbles === "boolean" ? v.companionBubbles : d.companionBubbles,
+    companionVoice: typeof v.companionVoice === "boolean" ? v.companionVoice : d.companionVoice,
+    companionLang: oneOf(COMPANION_LANGS, v.companionLang) ? v.companionLang : d.companionLang,
+    companionJapanese:
+      typeof v.companionJapanese === "boolean" ? v.companionJapanese : d.companionJapanese,
+    companionDiscreet:
+      typeof v.companionDiscreet === "boolean" ? v.companionDiscreet : d.companionDiscreet,
     onboarded: v.onboarded === true,
   };
 }

@@ -6,7 +6,9 @@ import { dayKeyAt } from "../core/time";
 import {
   CORNERS,
   SIZES,
+  COMPANION_LANGS,
   THEMES,
+  type CompanionLang,
   type Corner,
   type DataFile,
   type Settings,
@@ -144,16 +146,6 @@ export function SettingsTab({ data }: { data: DataFile }) {
           </div>
         </div>
         <div className={styles.settingRow}>
-          <label htmlFor="s-neko">Afficher Neko, le chat pixel, dans l'ensō</label>
-          <input
-            id="s-neko"
-            type="checkbox"
-            className={styles.switch}
-            checked={s.showCompanion}
-            onChange={(e) => set({ showCompanion: e.target.checked })}
-          />
-        </div>
-        <div className={styles.settingRow}>
           <label htmlFor="s-follow">Avec plusieurs écrans, suivre l'écran du curseur</label>
           <input
             id="s-follow"
@@ -171,6 +163,97 @@ export function SettingsTab({ data }: { data: DataFile }) {
             className={styles.switch}
             checked={s.launchAtLogin}
             onChange={(e) => set({ launchAtLogin: e.target.checked })}
+          />
+        </div>
+      </fieldset>
+
+      <fieldset className={styles.fieldset}>
+        <legend>Rai</legend>
+        <div className={styles.settingRow}>
+          <label htmlFor="s-rai">Afficher Rai à côté du widget</label>
+          <input
+            id="s-rai"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.showCompanion}
+            onChange={(e) => set({ showCompanion: e.target.checked })}
+          />
+        </div>
+        <div className={styles.settingRow}>
+          <label htmlFor="s-rai-bubbles">
+            Bulles de texte
+            <small className={styles.settingHint}>
+              Sa réplique s'affiche quelques secondes à la place du minuteur.
+            </small>
+          </label>
+          <input
+            id="s-rai-bubbles"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.companionBubbles}
+            onChange={(e) => set({ companionBubbles: e.target.checked })}
+          />
+        </div>
+        <div className={styles.settingRow}>
+          <label htmlFor="s-rai-voice">
+            Voix de Rai
+            <small className={styles.settingHint}>
+              Il dit la réplique à voix haute (voix de macOS).
+            </small>
+          </label>
+          <input
+            id="s-rai-voice"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.companionVoice}
+            onChange={(e) => set({ companionVoice: e.target.checked })}
+          />
+        </div>
+        <div className={styles.settingRow}>
+          <span>
+            Langue de la traduction
+            <small className={styles.settingHint}>Pour le texte et pour la voix.</small>
+          </span>
+          <div className={styles.seg} role="group" aria-label="Langue de la traduction">
+            {COMPANION_LANGS.map((l) => (
+              <button
+                key={l}
+                aria-pressed={s.companionLang === l}
+                onClick={() => set({ companionLang: l })}
+              >
+                {LANG_LABEL[l]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className={styles.settingRow}>
+          <label htmlFor="s-rai-ja">
+            Japonais en premier
+            <small className={styles.settingHint}>
+              La réplique en japonais, puis sa traduction.
+            </small>
+          </label>
+          <input
+            id="s-rai-ja"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.companionJapanese}
+            onChange={(e) => set({ companionJapanese: e.target.checked })}
+          />
+        </div>
+        <div className={styles.settingRow}>
+          <label htmlFor="s-rai-discreet">
+            Mode discret
+            <small className={styles.settingHint}>
+              Ni bulle ni voix pendant un focus, sauf à la fin.
+            </small>
+          </label>
+          <input
+            id="s-rai-discreet"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.companionDiscreet}
+            onChange={(e) => set({ companionDiscreet: e.target.checked })}
           />
         </div>
       </fieldset>
@@ -373,6 +456,12 @@ function NumberRow(props: {
     </div>
   );
 }
+
+const LANG_LABEL: Record<CompanionLang, string> = {
+  fr: "Français",
+  en: "English",
+  none: "Aucune",
+};
 
 const CORNER_LABEL: Record<Corner, string> = {
   "top-left": "En haut à gauche",

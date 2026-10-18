@@ -96,24 +96,6 @@
   width: 100%;
   height: 100%;
 }
-/* Neko (D-043) : au centre du petit ensō, au-dessus du temps dans le grand. 16 cases × 1,5 et
-   × 2 px : des pixels entiers sur un écran Retina. */
-.miniEnso {
-  position: relative;
-}
-.miniEnso .miniNeko {
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  width: 24px;
-  height: 24px;
-}
-.bigEnso .bigNeko {
-  position: static;
-  width: 32px;
-  height: 32px;
-  margin-bottom: 2px;
-}
 .compactText {
   min-width: 0;
 }
@@ -222,8 +204,6 @@
   font-weight: 700;
   font-size: 27px;
   font-variant-numeric: tabular-nums;
-  justify-items: center;
-  line-height: 1;
 }
 .side {
   display: grid;
@@ -505,4 +485,66 @@
 .collapse svg {
   width: 14px;
   height: 14px;
+}
+
+/* ---------- Rai parle (D-044) : la réplique remplace le minuteur, quelques secondes ---------- */
+.talk {
+  height: 88px;
+  background: var(--surface);
+  border-color: var(--ink-muted);
+}
+.talk .compact {
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+}
+.speech {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 14px;
+  cursor: pointer;
+  animation: speechIn 0.25s var(--ease);
+}
+@keyframes speechIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.ja {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", var(--f-ui);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.romaji {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--f-ui);
+  font-weight: 400;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+.tr {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .speech {
+    animation: none;
+  }
 }

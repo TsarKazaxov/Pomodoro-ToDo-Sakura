@@ -337,3 +337,21 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - Deux images par humeur, alternées au tick d'une seconde déjà en place : aucune animation supplémentaire, aucun coût CPU mesurable (D-036). Image fixe si « Réduire les animations » est activé dans macOS.
 - Dessiné en SVG (`crispEdges`), une dizaine de chemins par image ; tailles 24 et 32 px = pixels entiers sur écran Retina.
 - Désactivable : Réglages → Widget.
+
+---
+
+## V1.1.0 — Rai, la mascotte vivante
+
+### D-044 · Rai remplace Neko
+- **Personnage** : Rai, raijū (bête-éclair du folklore japonais), renard-hérisson indigo à la queue en éclair, forme super dorée. Illustrations manga générées par l'utilisateur dans ChatGPT à partir de `docs/mascotte/PROMPTS-GPT.md` (17 poses), détourées et recalées par `scripts/rai-assets.py` (même ligne de pieds, échelle corrigée pose par pose), 256 × 256 WebP, 288 Ko au total. Plan et moodboard : `docs/mascotte/PLAN.md`.
+- **Place** : Rai (112 px) se tient à côté de la fiche du minuteur, du côté du bord de l'écran ; en haut ou en bas au centre, la fiche passe sous lui ou au-dessus. Sur le bord gauche, il se retourne pour regarder l'écran. La fenêtre grandit en conséquence ; elle grandit toujours vers l'intérieur.
+- **Comportement** (`src/companion/engine.ts`, pur, 20 tests) : une humeur de fond tirée du minuteur et de l'activité (repos et clignement, impatience après 2 min d'arrêt, travail, sommeil après 3 min sans clavier ni souris pendant un focus, forme super après 10 min d'activité continue ou en prolongation D-042, pause onigiri), plus des réactions brèves (victoire à chaque tâche cochée, réveil qui sonne en fin de focus et de pause, sursaut quand tu reviens pendant qu'il dort, sursaut quand tu cliques sur lui, esquive, bulletin du soir après 18 h).
+- **Répliques** : japonais (kana et romanisation), puis traduction en français ou en anglais, ou aucune. Plusieurs variantes par réaction, à tour de rôle. Une réplique ordinaire toutes les 3 min au plus ; les moments importants passent toujours. Il ne parle pas dans le vide : pas de réplique d'impatience si tu n'es pas là.
+- **Bulle** : la réplique remplace le minuteur dans la fiche repliée pendant 5 s (9 s pour le bulletin) ; la fiche passe de 64 à 88 px de haut. Pas de bulle quand le widget est déployé.
+- **Voix** : commande `say` de macOS, une voix par langue (Kyoko ou Otoya pour le japonais, Thomas ou Amélie pour le français, Samantha ou Daniel pour l'anglais, sinon la première voix installée de la langue). Japonais puis traduction ; une nouvelle réplique coupe la précédente ; volume = volume des sons. Les voix « Enhanced » sont préférées si installées.
+- **Interactions** : cliquer sur Rai le taquine ; le glisser déplace le widget (D-040). Curseur immobile 2 s sur lui pendant un focus : il file à l'opposé (gauche ↔ droite, haut ↔ bas).
+- **Réglages** (section Rai) : afficher Rai, bulles, voix, langue de la traduction, japonais en premier, mode discret (ni bulle ni voix pendant un focus, sauf à la fin).
+- **Coût** : pas de nouvelle minuterie (le moteur tourne au tick d'une seconde existant) ; animations sur `opacity` et `transform` uniquement (compositeur) ; images figées si « Réduire les animations ».
+- **Non fait, faute d'images** : bâillement, moquerie, akanbe, salut (à ajouter quand elles existent : une ligne dans `scripts/rai-assets.py` et une entrée dans `Rai.tsx`). **Pas encore fait** : laisser passer les clics à travers les zones transparentes de la fenêtre ; balade pendant les pauses ; clips audio d'une vraie voix « anime ».
+- Le clignement utilise une image redessinée par ChatGPT (et non une retouche de la pose de base) : il passe en fondu de 0,18 s pour masquer la différence.
+- Neko (D-043) est retiré.
