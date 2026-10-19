@@ -38,6 +38,7 @@ pub fn run() {
             widget::widget_snap,
             widget::mouse_pressed,
             widget::idle_seconds,
+            widget::set_hit_rects,
             voice::speak,
             voice::stop_speaking,
             tray::tray_update,
@@ -54,6 +55,7 @@ pub fn run() {
             }
             tray::create(app.handle())?;
             widget::start_follow(app.handle().clone());
+            widget::start_click_through(app.handle().clone());
             shortcuts::register_all(app.handle());
             Ok(())
         })

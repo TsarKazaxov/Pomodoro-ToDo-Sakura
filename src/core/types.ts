@@ -101,6 +101,8 @@ export interface Settings {
   companionJapanese: boolean;
   /** Aucune bulle ni voix pendant un focus, sauf à la fin. */
   companionDiscreet: boolean;
+  /** Pendant les pauses, Rai change parfois de place, puis revient (D-045). */
+  companionWander: boolean;
   /** Premier lancement terminé. */
   onboarded: boolean;
 }

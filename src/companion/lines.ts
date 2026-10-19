@@ -15,6 +15,7 @@ export type Reaction =
   | "taskDone"
   | "dodge"
   | "poke"
+  | "wander"
   | "report";
 
 export interface Line {
@@ -172,6 +173,20 @@ export const LINES: Record<Reaction, Line[]> = {
       romaji: "Kusuguttai!",
       fr: "Hé, ça chatouille !",
       en: "Hey, that tickles!",
+    },
+  ],
+  wander: [
+    {
+      ja: "ぶらぶら〜",
+      romaji: "Bura bura~",
+      fr: "Je me dégourdis les pattes.",
+      en: "Just stretching my legs.",
+    },
+    {
+      ja: "ちょっと散歩！",
+      romaji: "Chotto sanpo!",
+      fr: "Petite balade, je reviens.",
+      en: "Quick stroll, be right back.",
     },
   ],
   report: [

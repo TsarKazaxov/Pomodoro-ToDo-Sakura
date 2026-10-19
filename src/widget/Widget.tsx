@@ -13,7 +13,7 @@ import {
   progress,
   remainingMs,
 } from "../core/timer";
-import type { Corner, DataFile, Settings } from "../core/types";
+import { CORNERS, type Corner, type DataFile, type Settings } from "../core/types";
 import { fr } from "../i18n/fr";
 import {
   notify,
@@ -24,6 +24,8 @@ import {
   trayUpdate,
   widgetLayout,
   setFollowScreen,
+  setHitRects,
+  lastInputAt,
   focusWidget,
   pressWidget,
   widgetSnap,
@@ -46,6 +48,7 @@ export const EXPANDED = { w: 360, h: 520 };
 /** Fiche repliée quand Rai parle : la réplique prend la place du minuteur (D-044). */
 export const TALK_H = 88;
 const RAI_GAP = 4;
+const WANDER_MS = 3 * 60_000;
 
 /**
  * Disposition de Rai et de la fiche (D-044) : au milieu d'un bord haut ou bas, la fiche passe
@@ -144,7 +147,10 @@ function WidgetReady({ data }: { data: DataFile }) {
   const [bloom, setBloom] = useState(false);
   const [pop, setPop] = useState(0);
   const [draft, setDraft] = useState("");
-  const corner = data.settings.corner;
+  // Place choisie, et place provisoire pendant une balade de pause (D-045).
+  const homeCorner = data.settings.corner;
+  const [wander, setWander] = useState<Corner | null>(null);
+  const corner = wander ?? homeCorner;
   const openRef = useRef(open);
   openRef.current = open;
   const showRai = data.settings.showCompanion;
@@ -188,6 +194,7 @@ function WidgetReady({ data }: { data: DataFile }) {
         }
         const snap = await widgetSnap();
         if (!snap) return;
+        setWander(null);
         const patch: Partial<Settings> = { corner: snap.corner };
         if (snap.movedScreen) patch.followCursorScreen = false;
         dispatch({ type: "settings/update", patch });
@@ -216,13 +223,35 @@ function WidgetReady({ data }: { data: DataFile }) {
     linger.current = window.setTimeout(() => {
       if (openRef.current || pressing.current || data.timer.phase !== "focus") return;
       pushRai({ type: "linger" });
-      window.setTimeout(
-        () => dispatch({ type: "settings/update", patch: { corner: mirrorCorner(corner) } }),
-        750,
-      );
+      window.setTimeout(() => {
+        setWander(null);
+        dispatch({ type: "settings/update", patch: { corner: mirrorCorner(corner) } });
+      }, 750);
     }, 2_000);
   };
   const onRaiLeave = () => window.clearTimeout(linger.current);
+
+  // Balade : pendant une pause, toutes les 3 min si tu ne touches à rien, Rai change de place ;
+  // à la fin de la pause, il rentre chez lui.
+  const lastWander = useRef(0);
+  const inBreak = data.timer.phase === "short_break" || data.timer.phase === "long_break";
+  useEffect(() => {
+    if (!inBreak) {
+      lastWander.current = 0;
+      if (wander) setWander(null);
+      return;
+    }
+    if (lastWander.current === 0) lastWander.current = now;
+    if (!showRai || !data.settings.companionWander || open) return;
+    const last = lastInputAt();
+    if (now - lastWander.current < WANDER_MS || (last !== null && now - last < 15_000)) return;
+    lastWander.current = now;
+    const options = CORNERS.filter((c) => c !== corner);
+    const next = options[Math.floor(Math.random() * options.length)] ?? null;
+    pushRai({ type: "wander" });
+    window.setTimeout(() => setWander(next), 750);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- au tick
+  }, [now, inBreak]);
 
   // Pétales en attente (fin de focus pendant que le widget était replié) : au prochain déploiement.
   useEffect(() => {
@@ -367,6 +396,7 @@ function WidgetReady({ data }: { data: DataFile }) {
   );
 
   const layout = companionLayout(corner, open && expandedFrame, showRai);
+  useHitRects(now);
   const speech = showRai && data.settings.companionBubbles ? rai.speech : null;
   const talking = !!speech && !open;
   const [, hSide] = corner.split("-");
@@ -393,6 +423,7 @@ function WidgetReady({ data }: { data: DataFile }) {
           isBreak ? styles.break : "",
         ].join(" ")}
         style={layout.card}
+        data-hit
         {...handlers}
         onBlur={handlers.onBlur}
       >
@@ -596,6 +627,41 @@ function WidgetReady({ data }: { data: DataFile }) {
       </div>
     </>
   );
+}
+
+/**
+ * Signale à macOS les zones opaques du widget (fiche, Rai, avec la marge de l'ombre) : le reste de
+ * la fenêtre, transparent, laisse passer les clics (D-045). Recalculé à chaque changement de taille
+ * (ouverture, bulle) et à chaque seconde, envoyé seulement s'il a changé.
+ */
+function useHitRects(now: number) {
+  const last = useRef("");
+  const report = useCallback(() => {
+    const rects = [...document.querySelectorAll<HTMLElement>("[data-hit]")].map((el) => {
+      const r = el.getBoundingClientRect();
+      return [r.left - 4, r.top - 4, r.width + 8, r.height + 8].map(Math.round) as [
+        number,
+        number,
+        number,
+        number,
+      ];
+    });
+    const key = JSON.stringify(rects);
+    if (key !== last.current) {
+      last.current = key;
+      void setHitRects(rects);
+    }
+  }, []);
+  useEffect(() => {
+    const ro = new ResizeObserver(report);
+    document.querySelectorAll("[data-hit]").forEach((el) => ro.observe(el));
+    window.addEventListener("resize", report);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", report);
+    };
+  });
+  useEffect(report, [now, report]);
 }
 
 function Dots({ spent, expected, xl }: { spent: number; expected: number; xl: boolean }) {

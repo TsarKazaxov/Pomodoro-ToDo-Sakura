@@ -352,6 +352,11 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - **Interactions** : cliquer sur Rai le taquine ; le glisser déplace le widget (D-040). Curseur immobile 2 s sur lui pendant un focus : il file à l'opposé (gauche ↔ droite, haut ↔ bas).
 - **Réglages** (section Rai) : afficher Rai, bulles, voix, langue de la traduction, japonais en premier, mode discret (ni bulle ni voix pendant un focus, sauf à la fin).
 - **Coût** : pas de nouvelle minuterie (le moteur tourne au tick d'une seconde existant) ; animations sur `opacity` et `transform` uniquement (compositeur) ; images figées si « Réduire les animations ».
-- **Non fait, faute d'images** : bâillement, moquerie, akanbe, salut (à ajouter quand elles existent : une ligne dans `scripts/rai-assets.py` et une entrée dans `Rai.tsx`). **Pas encore fait** : laisser passer les clics à travers les zones transparentes de la fenêtre ; balade pendant les pauses ; clips audio d'une vraie voix « anime ».
+- **Non fait, faute d'images** : bâillement, moquerie, akanbe, salut (à ajouter quand elles existent : une ligne dans `scripts/rai-assets.py` et une entrée dans `Rai.tsx`). **Pas encore fait** : clips audio d'une vraie voix « anime ». (Clics à travers le vide et balade : D-045.)
 - Le clignement utilise une image redessinée par ChatGPT (et non une retouche de la pose de base) : il passe en fondu de 0,18 s pour masquer la différence.
 - Neko (D-043) est retiré.
+
+### D-045 · Clics à travers le vide de la fenêtre, balade pendant les pauses
+- **Constat** : avec Rai, la fenêtre du widget est plus grande que la fiche ; ses zones transparentes bloquaient les clics vers les apps en dessous.
+- **Clics** : le widget signale ses zones opaques (fiche et Rai, + 4 px d'ombre) à chaque changement de taille et chaque seconde. Un fil Rust relève le curseur (toutes les 40 ms quand il est à moins de 60 pt du widget, sinon toutes les 250 ms) et rend la fenêtre transparente aux clics hors de ces zones (`set_ignore_cursor_events`). Sans zones connues, la fenêtre garde ses clics (jamais de fenêtre « fantôme »).
+- **Balade** : pendant une pause, toutes les 3 min si tu ne touches à rien depuis 15 s, Rai file vers une autre des huit places (« Je me dégourdis les pattes ») ; à la fin de la pause, il rentre à sa place. La balade ne change pas le réglage de position ; un glisser ou une esquive, si. Désactivable : Réglages → Rai.

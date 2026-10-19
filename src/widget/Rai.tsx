@@ -57,6 +57,7 @@ export function Rai(props: {
       className={`${styles.rai} ${styles[props.pose] ?? ""}`}
       style={props.style}
       role="img"
+      data-hit
       aria-label={p.label}
       title="Rai · cliquer : le taquiner · glisser : le déplacer"
       onMouseDown={props.onMouseDown}

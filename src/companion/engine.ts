@@ -27,7 +27,8 @@ export type CompanionEvent =
   | { type: "focusEnd" }
   | { type: "breakEnd" }
   | { type: "poke" }
-  | { type: "linger" };
+  | { type: "linger" }
+  | { type: "wander" };
 
 export interface Tick {
   now: number;
@@ -106,6 +107,7 @@ const ACTS: Record<CompanionEvent["type"], { pose: Pose; ms: number; reaction: R
   breakEnd: { pose: "reveil", ms: 2_500, reaction: "breakEnd" },
   poke: { pose: "sursaut", ms: 1_400, reaction: "poke" },
   linger: { pose: "esquive", ms: 800, reaction: "dodge" },
+  wander: { pose: "esquive", ms: 800, reaction: "wander" },
 };
 
 export function initialCompanion(now: number, day: string): CompanionState {

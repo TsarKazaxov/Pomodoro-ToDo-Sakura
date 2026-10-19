@@ -242,6 +242,21 @@ export function SettingsTab({ data }: { data: DataFile }) {
           />
         </div>
         <div className={styles.settingRow}>
+          <label htmlFor="s-rai-wander">
+            Balade pendant les pauses
+            <small className={styles.settingHint}>
+              Il change parfois de place, puis revient à la sienne à la fin de la pause.
+            </small>
+          </label>
+          <input
+            id="s-rai-wander"
+            type="checkbox"
+            className={styles.switch}
+            checked={s.companionWander}
+            onChange={(e) => set({ companionWander: e.target.checked })}
+          />
+        </div>
+        <div className={styles.settingRow}>
           <label htmlFor="s-rai-discreet">
             Mode discret
             <small className={styles.settingHint}>

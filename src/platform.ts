@@ -187,6 +187,10 @@ export function watchActivity(): () => number | null {
 /** Dernière activité clavier ou souris connue (voir `watchActivity`). */
 export const lastInputAt = () => lastInput;
 
+/** Zones opaques du widget (fiche, Rai) : ailleurs, les clics passent aux apps dessous (D-045). */
+export const setHitRects = (rects: [number, number, number, number][]) =>
+  call("set_hit_rects", { rects });
+
 /** Voix de Rai (D-044) : chaque partie dans sa langue, à la suite. */
 export const speak = (parts: { text: string; lang: string }[], volume: number) =>
   call("speak", { parts, volume });

@@ -51,6 +51,7 @@ export function defaultSettings(): Settings {
     companionLang: "fr",
     companionJapanese: true,
     companionDiscreet: false,
+    companionWander: true,
     onboarded: false,
   };
 }
@@ -194,6 +195,7 @@ function readSettings(v: unknown): Settings {
       typeof v.companionJapanese === "boolean" ? v.companionJapanese : d.companionJapanese,
     companionDiscreet:
       typeof v.companionDiscreet === "boolean" ? v.companionDiscreet : d.companionDiscreet,
+    companionWander: typeof v.companionWander === "boolean" ? v.companionWander : d.companionWander,
     onboarded: v.onboarded === true,
   };
 }

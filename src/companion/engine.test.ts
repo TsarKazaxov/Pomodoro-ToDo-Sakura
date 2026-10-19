@@ -147,6 +147,15 @@ describe("Rai : réactions et répliques", () => {
     expect(s.bubble?.reaction).toBe("taskDone");
   });
 
+  it("balade : il file, avec une réplique ordinaire", () => {
+    const s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "break" }), [
+      { type: "wander" },
+    ]);
+    expect(poseOf(s, T0 + 100)).toBe("esquive");
+    // La réplique de pause vient d'être dite : celle de balade attend son tour.
+    expect(s.bubble?.reaction).toBe("break");
+  });
+
   it("une réplique ordinaire attend 3 min après la précédente", () => {
     let s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "focus" }));
     s = step(s, tick({ now: T0 + 30_000, phase: "break" }));

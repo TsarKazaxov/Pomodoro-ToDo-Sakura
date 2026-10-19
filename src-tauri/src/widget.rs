@@ -362,6 +362,65 @@ fn follow_once(app: &AppHandle, follower: &mut Follower) -> Option<()> {
     widget.set_position(LogicalPosition::new(x, y)).ok()
 }
 
+// ---------- clics à travers les zones transparentes (D-045) ----------
+
+/// Zones opaques du widget (fiche, Rai), en points relatifs à la fenêtre.
+static HIT_RECTS: Mutex<Vec<Rect>> = Mutex::new(Vec::new());
+static PASS_THROUGH: AtomicBool = AtomicBool::new(false);
+
+/// Le point (relatif à la fenêtre) est-il sur une zone opaque ? Sans zones connues : oui
+/// (on ne laisse jamais passer les clics à l'aveugle).
+pub fn hits(point: (f64, f64), rects: &[Rect]) -> bool {
+    rects.is_empty()
+        || rects
+            .iter()
+            .any(|r| point.0 >= r.x && point.0 < r.x + r.w && point.1 >= r.y && point.1 < r.y + r.h)
+}
+
+#[tauri::command]
+pub fn set_hit_rects(rects: Vec<[f64; 4]>) {
+    if let Ok(mut h) = HIT_RECTS.lock() {
+        *h = rects
+            .into_iter()
+            .map(|[x, y, w, h]| Rect { x, y, w, h })
+            .collect();
+    }
+}
+
+/// Surveille le curseur : au-dessus du vide de la fenêtre, les clics passent aux apps dessous ;
+/// au-dessus de la fiche ou de Rai, le widget les reçoit. Relevé fréquent seulement quand le
+/// curseur est près du widget.
+pub fn start_click_through(app: AppHandle) {
+    std::thread::spawn(move || loop {
+        let near = click_through_once(&app).unwrap_or(false);
+        std::thread::sleep(Duration::from_millis(if near { 40 } else { 250 }));
+    });
+}
+
+fn click_through_once(app: &AppHandle) -> Option<bool> {
+    let widget = app.get_webview_window("widget")?;
+    if !widget.is_visible().ok()? {
+        return Some(false);
+    }
+    let primary_scale = app.primary_monitor().ok()??.scale_factor();
+    let c = app.cursor_position().ok()?;
+    let cursor = (c.x / primary_scale, c.y / primary_scale);
+    let scale = widget.scale_factor().ok()?;
+    let pos = widget.outer_position().ok()?;
+    let size = widget.outer_size().ok()?;
+    let (wx, wy) = (pos.x as f64 / scale, pos.y as f64 / scale);
+    let (ww, wh) = (size.width as f64 / scale, size.height as f64 / scale);
+    let local = (cursor.0 - wx, cursor.1 - wy);
+    let inside = local.0 >= 0.0 && local.1 >= 0.0 && local.0 < ww && local.1 < wh;
+    let near = local.0 >= -60.0 && local.1 >= -60.0 && local.0 < ww + 60.0 && local.1 < wh + 60.0;
+    let pass = inside && !hits(local, &HIT_RECTS.lock().ok()?.clone());
+    if pass != PASS_THROUGH.load(Ordering::Relaxed) {
+        widget.set_ignore_cursor_events(pass).ok()?;
+        PASS_THROUGH.store(pass, Ordering::Relaxed);
+    }
+    Some(near)
+}
+
 static QUITTING: AtomicBool = AtomicBool::new(false);
 pub fn quitting() -> bool {
     QUITTING.load(Ordering::Relaxed)
@@ -522,6 +581,28 @@ mod tests {
         };
         assert_eq!(nearest_anchor((350.0, 800.0), tall), "middle-left");
         assert_eq!(nearest_anchor((560.0, 800.0), tall), "middle-right");
+    }
+
+    #[test]
+    fn zones_opaques_du_widget() {
+        let rects = [
+            Rect {
+                x: 10.0,
+                y: 10.0,
+                w: 240.0,
+                h: 64.0,
+            },
+            Rect {
+                x: 254.0,
+                y: 10.0,
+                w: 112.0,
+                h: 112.0,
+            },
+        ];
+        assert!(hits((20.0, 20.0), &rects));
+        assert!(hits((300.0, 100.0), &rects));
+        assert!(!hits((100.0, 100.0), &rects)); // sous la fiche, à côté de Rai : vide
+        assert!(hits((100.0, 100.0), &[])); // zones inconnues : le widget garde les clics
     }
 
     #[test]

@@ -88,6 +88,8 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Coche une tâche : saut de victoire. Fin de focus : il brandit le réveil.
 - [ ] Clic sur Rai : il te taquine. Curseur immobile 2 s sur lui pendant un focus : il file de l'autre côté.
 - [ ] Réglages → Rai : voix coupée → plus de son ; langue English → répliques en anglais ; Aucune → japonais seul ; mode discret → silence pendant le focus.
+- [ ] Cliquer dans le vide juste à côté de Rai ou sous la fiche : le clic atteint l'app en dessous (V1.1.1).
+- [ ] Pendant une pause, sans toucher à rien 3 min : Rai change de place ; à la fin de la pause, il revient (V1.1.1).
 - [ ] Moniteur d'activité, focus en cours : CPU toujours < 2 %.
 
 **Raccourcis et menu**
