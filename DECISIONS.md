@@ -403,3 +403,12 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - **Mode discret supprimé** : c'est désormais le comportement normal (aucune parole pendant un focus en dehors de tes gestes et de la fin).
 - **Phrases** : plus courtes, l'information d'abord, une seule idée, pas de reproche. Les poses et animations sont inchangées.
 - **Clips ElevenLabs** : 60 au lieu de 155 (≈ 900 caractères).
+
+---
+
+## V1.4.0 — La voix de Rai
+
+### D-049 · Voix ElevenLabs enregistrée
+- Voix conçue par l'utilisateur avec Voice Design, **créée en japonais** (prompt « native Japanese voice actor » et texte d'aperçu japonais) : une voix née anglophone n'avait pas l'accent voulu ; née japonaise, elle le garde en espagnol, russe, français et anglais.
+- 60 clips (5 langues × 12 répliques), modèle Multilingual v2, < 1 Mo, enregistrés par le workflow « Voix de Rai » et commités dans `src/assets/rai/voice/`. La voix de macOS ne sert plus que de secours.
+- Les commits du robot ne relancent pas la build : la build qui embarque les clips part du commit suivant.

@@ -107,7 +107,7 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Réglages → Rai → Langue de Rai : Русский. Clique sur Rai : il répond en russe, à l'écrit et à voix haute (voix russe de macOS si aucun clip), avec le sous-titre français en petit.
 - [ ] Español, puis 日本語 : même chose ; en japonais, la lecture en romaji est à côté. Une seule langue entendue à chaque fois.
 - [ ] Sous-titres désactivés : plus de français sous la bulle.
-- [ ] (Après les clips ElevenLabs) La voix enregistrée remplace celle de macOS ; le bulletin du soir dit son titre avec la voix enregistrée.
+- [ ] (V1.4.0) Clic sur Rai, dans chaque langue : c'est la voix ElevenLabs (accent japonais), plus la voix de macOS. Réglages → Rai → Voix : « Sa voix enregistrée… ». Volume des sons à 0 : silence.
 
 **Raccourcis et menu**
 - [ ] ⌥⌘P démarre / suspend ; ⌥⌘N ouvre le widget avec le curseur dans l'ajout rapide ; ⌥⌘S ouvre la vue complète.
