@@ -82,7 +82,7 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 
 **Rai (V1.1.0)**
 - [ ] Rai apparaît à côté du widget ; en haut au centre, la fiche est sous lui ; sur le bord gauche, il regarde vers l'écran.
-- [ ] Minuteur arrêté 2 min en bougeant la souris : il s'impatiente et le dit (japonais puis français, à l'écrit et à voix haute).
+- [ ] Minuteur arrêté 2 min en bougeant la souris : il s'impatiente et le dit (dans la langue choisie, à l'écrit et à voix haute).
 - [ ] Focus : il travaille au clavier. 3 min sans toucher à rien : il s'endort (Zzz, bulle de morve). Bouge la souris : il sursaute, « J'dormais pas ! ».
 - [ ] 10 min de focus actif (ou prolongation) : transformation dorée.
 - [ ] Coche une tâche : saut de victoire. Fin de focus : il brandit le réveil.
@@ -98,6 +98,12 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Prendre une sous-tâche comme tâche en cours, lancer un focus de 1 min : la barre du widget avance pour la sous-tâche et pour le projet.
 - [ ] En pause, fiche repliée : « Reste … · Projet » (ou « Dépassé de … »).
 - [ ] Ancien fichier de données (V1.1) : le barème relu donne M = 1 h 40 (4 pomodoros × 25 min), rien n'est perdu.
+
+**Langue de Rai (V1.3.0)**
+- [ ] Réglages → Rai → Langue de Rai : Русский. Clique sur Rai : il répond en russe, à l'écrit et à voix haute (voix russe de macOS si aucun clip), avec le sous-titre français en petit.
+- [ ] Español, puis 日本語 : même chose ; en japonais, la lecture en romaji est à côté. Une seule langue entendue à chaque fois.
+- [ ] Sous-titres désactivés : plus de français sous la bulle.
+- [ ] (Après les clips ElevenLabs) La voix enregistrée remplace celle de macOS ; le bulletin du soir dit son titre avec la voix enregistrée.
 
 **Raccourcis et menu**
 - [ ] ⌥⌘P démarre / suspend ; ⌥⌘N ouvre le widget avec le curseur dans l'ajout rapide ; ⌥⌘S ouvre la vue complète.

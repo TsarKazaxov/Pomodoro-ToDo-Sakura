@@ -11,7 +11,7 @@ import {
   type CompanionState,
   type Tick,
 } from "./engine";
-import { fill, grade, LINES } from "./lines";
+import { clipText, fill, grade, LINES } from "./lines";
 
 const T0 = Date.UTC(2026, 9, 18, 8, 0);
 const MIN = 60_000;
@@ -206,10 +206,20 @@ describe("Rai : réactions et répliques", () => {
     expect(s.naps).toBe(0);
   });
 
-  it("chaque réplique existe dans les trois langues", () => {
+  it("chaque réplique existe dans les cinq langues, avec ses variables", () => {
     for (const [r, lines] of Object.entries(LINES))
-      for (const l of lines)
-        for (const k of ["ja", "romaji", "fr", "en"] as const) expect(l[k], r).toBeTruthy();
+      for (const l of lines) {
+        const vars = (t: string) => (t.match(/\{\w\}/g) ?? []).sort().join();
+        for (const k of ["ja", "romaji", "fr", "en", "es", "ru"] as const) {
+          expect(l[k], r).toBeTruthy();
+          expect(vars(l[k]), `${r} ${k}`).toBe(vars(l.fr));
+        }
+      }
+  });
+
+  it("clip du bulletin : le titre seul, sans chiffres", () => {
+    expect(clipText("report", LINES.report[0]!, "es")).toBe("¡El boletín de hoy!");
+    expect(clipText("focus", LINES.focus[1]!, "ru")).toBe("Поехали!");
   });
 
   it("appréciation et gabarit du bulletin", () => {

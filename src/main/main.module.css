@@ -578,6 +578,15 @@ h2 {
   padding: 3px 0;
   border-top: 1px solid var(--line);
 }
+.select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
 .seg {
   display: inline-flex;
   background: var(--surface-2);

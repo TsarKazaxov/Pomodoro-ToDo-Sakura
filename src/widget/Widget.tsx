@@ -468,17 +468,20 @@ function WidgetReady({ data }: { data: DataFile }) {
             className={styles.speech}
             onMouseDown={(e) => void press(e, openByClick)}
             aria-live="polite"
-            lang="ja"
           >
-            {data.settings.companionJapanese && (
-              <span className={styles.ja}>
-                {speech.ja}
+            {speech.lang === "ja" ? (
+              <span className={styles.ja} lang="ja">
+                {speech.text}
                 <small className={styles.romaji}>{speech.romaji}</small>
               </span>
-            )}
-            {speech.text && (
-              <span className={styles.tr} lang={data.settings.companionLang}>
+            ) : (
+              <span className={styles.line} lang={speech.lang}>
                 {speech.text}
+              </span>
+            )}
+            {speech.sub && (
+              <span className={speech.lang === "ja" ? styles.tr : styles.sub} lang="fr">
+                {speech.sub}
               </span>
             )}
           </div>

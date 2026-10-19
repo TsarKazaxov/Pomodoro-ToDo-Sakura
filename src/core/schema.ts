@@ -7,13 +7,14 @@
 import { initialTimer } from "./timer";
 import { toLocalIso } from "./time";
 import {
-  COMPANION_LANGS,
+  RAI_LANGS,
   CORNERS,
   PHASE_TYPES,
   SIZES,
   TASK_STATUSES,
   THEMES,
   type DataFile,
+  type RaiLang,
   type Scale,
   type Session,
   type Settings,
@@ -49,8 +50,8 @@ export function defaultSettings(): Settings {
     showCompanion: true,
     companionBubbles: true,
     companionVoice: true,
-    companionLang: "fr",
-    companionJapanese: true,
+    companionLang: "ja",
+    companionSubtitles: true,
     companionDiscreet: false,
     companionWander: true,
     onboarded: false,
@@ -88,6 +89,19 @@ const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFin
 const isIso = (v: unknown): v is string => isStr(v) && /^\d{4}-\d{2}-\d{2}T/.test(v);
 const oneOf = <T extends string>(list: readonly T[], v: unknown): v is T =>
   isStr(v) && (list as readonly string[]).includes(v);
+
+/**
+ * Langue de Rai. Avant D-047, `companionLang` était la langue de la traduction ("fr", "en",
+ * "none") et `companionJapanese` disait si le japonais passait d'abord : un tel fichier garde
+ * le japonais s'il était activé, sinon sa traduction.
+ */
+function readRaiLang(v: Record<string, unknown>, fallback: RaiLang): RaiLang {
+  if (typeof v.companionJapanese === "boolean") {
+    if (v.companionJapanese) return "ja";
+    return v.companionLang === "fr" || v.companionLang === "en" ? v.companionLang : "ja";
+  }
+  return oneOf(RAI_LANGS, v.companionLang) ? v.companionLang : fallback;
+}
 
 function fail(where: string): never {
   throw new ShapeError(where);
@@ -199,9 +213,9 @@ function readSettings(v: unknown): Settings {
     companionBubbles:
       typeof v.companionBubbles === "boolean" ? v.companionBubbles : d.companionBubbles,
     companionVoice: typeof v.companionVoice === "boolean" ? v.companionVoice : d.companionVoice,
-    companionLang: oneOf(COMPANION_LANGS, v.companionLang) ? v.companionLang : d.companionLang,
-    companionJapanese:
-      typeof v.companionJapanese === "boolean" ? v.companionJapanese : d.companionJapanese,
+    companionLang: readRaiLang(v, d.companionLang),
+    companionSubtitles:
+      typeof v.companionSubtitles === "boolean" ? v.companionSubtitles : d.companionSubtitles,
     companionDiscreet:
       typeof v.companionDiscreet === "boolean" ? v.companionDiscreet : d.companionDiscreet,
     companionWander: typeof v.companionWander === "boolean" ? v.companionWander : d.companionWander,

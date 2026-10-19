@@ -374,3 +374,17 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - **Widget** : sous la tâche en cours, la barre du projet (parent ou tâche elle-même) et jusqu'à 3 sous-tâches ouvertes, à cocher ou à prendre comme tâche en cours. Dans ce cas, les priorités se limitent à 2 et la fiche déployée passe à 560 px de haut. En pause, la fiche repliée affiche « Reste 1 h 10 · Projet » (ou « Dépassé de 20 min ») à la place de la tâche.
 - **Calibration** : toujours en pomodoros, les pomodoros attendus étant déduits de la durée (`round(minutes / durée du focus)`, au moins 1).
 - **Non fait** : pas de chrono à rebours « temps restant » qui remplacerait l'ensō pendant le focus ; l'ensō garde la durée du pomodoro, le temps restant du projet est à côté. Pas de sous-sous-tâches.
+
+---
+
+## V1.3.0 — Rai parle une seule langue
+
+### D-047 · Une langue à la fois ; voix ElevenLabs enregistrée à l'avance
+- **Constat** : japonais puis traduction, à voix haute, c'est deux voix qui se suivent pour une réplique ; trop long, et ça casse le personnage.
+- **Une seule langue** : japonais (par défaut), espagnol, russe, français ou anglais, pour le texte et pour la voix (Réglages → Rai → Langue de Rai). Toutes les répliques existent dans les cinq langues (test : mêmes variables partout).
+- **Sous-titres** : quand Rai ne parle pas français, sa réplique peut s'afficher en petit en français sous la bulle (écrit seulement, activé par défaut). En japonais, la lecture en romaji reste à côté.
+- **Ancien réglage** : « japonais en premier » activé → japonais ; sinon la langue de traduction (français ou anglais).
+- **Voix ElevenLabs** : une voix conçue par l'utilisateur (Voice Design, une seule voix pour les cinq langues, modèle Multilingual v2). Les répliques sont enregistrées une fois en clips MP3 (`scripts/rai-voice.mjs`, ≈ 3 100 caractères pour tout), par un workflow GitHub qui détient la clé en secret de dépôt et commite les clips. L'app joue le clip (Web Audio, volume des sons) si le manifeste confirme qu'il dit le texte actuel ; sinon, voix de macOS (ajout de voix espagnoles et russes). Procédure : `docs/mascotte/VOIX-ELEVENLABS.md`.
+- **Pourquoi pas en direct** : clé dans l'app, réseau obligatoire, crédits consommés à chaque réplique. Les clips marchent hors ligne et ne mettent aucun secret dans le `.dmg`.
+- **Pourquoi je ne crée pas la voix moi-même** : le réseau de l'environnement de développement bloque api.elevenlabs.io, le compte est personnel, et le choix d'une voix se fait à l'oreille.
+- **Limite** : le bulletin du soir change chaque jour ; son clip ne dit que le titre, les chiffres restent dans la bulle.

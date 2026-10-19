@@ -39,3 +39,51 @@ export function chime(strikes: number, gain: number) {
     // Audio indisponible : silence.
   }
 }
+
+// ---------- clips de voix de Rai (D-047) ----------
+
+let voice: AudioBufferSourceNode | null = null;
+let voiceSeq = 0;
+const buffers = new Map<string, Promise<AudioBuffer>>();
+
+/** Joue un clip ; `false` s'il n'a pas pu être lu (le son de macOS prend alors le relais). */
+export async function playClip(url: string, gain: number): Promise<boolean> {
+  const id = ++voiceSeq;
+  stopClip(false);
+  if (gain <= 0) return true;
+  try {
+    ctx ??= new AudioContext();
+    const ac = ctx;
+    void ac.resume();
+    let buf = buffers.get(url);
+    if (!buf) {
+      buf = fetch(url)
+        .then((r) => r.arrayBuffer())
+        .then((b) => ac.decodeAudioData(b));
+      buffers.set(url, buf);
+    }
+    const audio = await buf;
+    if (id !== voiceSeq) return true; // une réplique plus récente a pris la parole
+    const src = ac.createBufferSource();
+    const g = ac.createGain();
+    g.gain.value = Math.min(1, gain);
+    src.buffer = audio;
+    src.connect(g).connect(ac.destination);
+    src.start();
+    voice = src;
+    return true;
+  } catch {
+    buffers.delete(url);
+    return false;
+  }
+}
+
+export function stopClip(cancel = true) {
+  if (cancel) voiceSeq++;
+  try {
+    voice?.stop();
+  } catch {
+    // déjà terminé
+  }
+  voice = null;
+}

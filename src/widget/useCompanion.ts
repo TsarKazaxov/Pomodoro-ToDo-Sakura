@@ -1,5 +1,6 @@
 // Rai dans le widget (D-044) : fait vivre le moteur de comportement au rythme de la seconde,
-// lui transmet les événements (tâche cochée, fin de focus…), et prononce ses répliques.
+// lui transmet les événements (tâche cochée, fin de focus…), et prononce ses répliques dans une
+// seule langue (D-047) : clip enregistré s'il existe, sinon voix de macOS.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -10,23 +11,32 @@ import {
   type CompanionState,
   type Pose,
 } from "../companion/engine";
-import { fill, grade, LINES } from "../companion/lines";
+import { clipText, fill, grade, LINES, type Reaction } from "../companion/lines";
+import { clipUrl } from "../companion/voiceClips";
 import { dayKeyAt, dayKeyOf } from "../core/time";
 import { isOvertime, isPaused } from "../core/timer";
-import type { DataFile } from "../core/types";
-import { lastInputAt, speak } from "../platform";
+import type { DataFile, RaiLang } from "../core/types";
+import { lastInputAt, speak, stopSpeaking } from "../platform";
+import { playClip, stopClip } from "../ui/sound";
 
 export interface Speech {
   /** Identifiant de la réplique (change à chaque nouvelle bulle). */
   key: number;
-  ja: string;
-  romaji: string;
-  /** Traduction dans la langue choisie ; vide si « aucune ». */
+  lang: RaiLang;
+  /** La réplique, dans la langue de Rai. */
   text: string;
+  /** Lecture du japonais (japonais seulement). */
+  romaji: string;
+  /** Sous-titre en français ; vide si désactivé ou si Rai parle déjà français. */
+  sub: string;
+  /** Pour retrouver le clip enregistré. */
+  reaction: Reaction;
+  variant: number;
 }
 
 export function useCompanion(data: DataFile, now: number) {
   const s = data.settings;
+  const lang = s.companionLang;
   const engine = useRef<CompanionState>(initialCompanion(now, dayKeyAt(now)));
   const pending = useRef<CompanionEvent[]>([]);
   const [view, setView] = useState<{ pose: Pose; speech: Speech | null }>({
@@ -74,13 +84,19 @@ export function useCompanion(data: DataFile, now: number) {
       if (b.reaction === "report") {
         const gr = grade(Number(vars.p ?? 0), Number(vars.n ?? 0));
         vars.g = gr.g;
-        vars.c = s.companionLang === "en" ? gr.en : gr.fr;
+        vars.c = gr[lang];
+        vars.r = gr.romaji;
+        vars.f = gr.fr;
       }
+      const v = (c: string) => ({ ...vars, c: vars[c] ?? "" });
       speech = {
         key: b.since,
-        ja: line.ja,
-        romaji: line.romaji,
-        text: s.companionLang === "none" ? "" : fill(line[s.companionLang], vars),
+        lang,
+        text: fill(line[lang], v("c")),
+        romaji: lang === "ja" ? fill(line.romaji, v("r")) : "",
+        sub: s.companionSubtitles && lang !== "fr" ? fill(line.fr, v("f")) : "",
+        reaction: b.reaction,
+        variant: b.variant,
       };
     }
     setView((v) =>
@@ -88,13 +104,20 @@ export function useCompanion(data: DataFile, now: number) {
         ? v
         : { pose: poseOf(next, now), speech },
     );
-    // Voix : une fois par réplique, japonais puis traduction.
+    // Voix : une fois par réplique, dans une seule langue.
     if (speech && speech.key !== spoken.current && s.showCompanion && s.companionVoice) {
       spoken.current = speech.key;
-      const parts: { text: string; lang: string }[] = [];
-      if (s.companionJapanese) parts.push({ text: speech.ja, lang: "ja" });
-      if (speech.text) parts.push({ text: speech.text, lang: s.companionLang });
-      if (parts.length) void speak(parts, s.soundVolume);
+      const said = speech;
+      const line = LINES[said.reaction][said.variant] ?? LINES[said.reaction][0]!;
+      const url = clipUrl(lang, said.reaction, said.variant, clipText(said.reaction, line, lang));
+      const macos = () => void speak([{ text: said.text, lang }], s.soundVolume);
+      if (url) {
+        void stopSpeaking();
+        void playClip(url, s.soundVolume).then((ok) => ok || macos());
+      } else {
+        stopClip();
+        macos();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- un pas par seconde, au tick
   }, [now]);

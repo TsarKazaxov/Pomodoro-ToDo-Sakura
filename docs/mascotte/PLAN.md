@@ -47,7 +47,7 @@ Règles anti-saturation : une bulle toutes les 3 min au plus (sauf priorité hau
 4. **Voix** : `speechSynthesis` du WebView (ou commande `say` côté Rust si indisponible) ; file d'attente JA → traduction ; volume lié au réglage sonore ; jamais pendant un appel si détectable (sinon : mode discret).
 5. **Fenêtre** : le widget devient « compagnon » : Rai + fiche du minuteur, disposition selon la position (D-041). Les zones transparentes laissent passer les clics : Rust interroge la position du curseur (toutes les 50 ms quand il est proche) et bascule `set_ignore_cursor_events` hors des zones opaques.
 6. **Esquive et balade** : Rust anime le déplacement de la fenêtre le long du bord (~400 ms) ; esquive pendant le travail, balade seulement en pause ou inactivité.
-7. **Réglages** : Afficher Rai, Bulles, Voix, Langue de traduction (FR / EN / aucune), Japonais en premier, Mode discret, Balade.
+7. **Réglages** : Afficher Rai, Bulles, Voix, Langue de Rai (une seule : japonais, espagnol, russe, français, anglais — D-047), Sous-titres en français, Mode discret, Balade.
 
 ## Risques
 

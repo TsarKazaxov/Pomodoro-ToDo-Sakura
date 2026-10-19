@@ -70,8 +70,9 @@ export const CORNERS: readonly Corner[] = [
   "bottom-right",
 ];
 
-export type CompanionLang = "fr" | "en" | "none";
-export const COMPANION_LANGS: readonly CompanionLang[] = ["fr", "en", "none"];
+/** Langue de Rai, à l'écrit comme à l'oral : une seule à la fois (D-047). */
+export type RaiLang = "ja" | "es" | "ru" | "fr" | "en";
+export const RAI_LANGS: readonly RaiLang[] = ["ja", "es", "ru", "fr", "en"];
 
 export type Theme = "auto" | "light" | "dark";
 export const THEMES: readonly Theme[] = ["auto", "light", "dark"];
@@ -96,14 +97,14 @@ export interface Settings {
   extendWhileActive: boolean;
   /** Rai, la mascotte à côté du widget (D-044). */
   showCompanion: boolean;
-  /** Bulles de Rai : japonais, puis la traduction. */
+  /** Bulles de Rai. */
   companionBubbles: boolean;
-  /** Voix de Rai (voix de macOS). */
+  /** Voix de Rai (clips ElevenLabs s'ils existent, sinon voix de macOS). */
   companionVoice: boolean;
-  /** Langue de la traduction, à l'écrit comme à l'oral. */
-  companionLang: CompanionLang;
-  /** Japonais en premier (sinon : la traduction seule). */
-  companionJapanese: boolean;
+  /** Langue de Rai, à l'écrit comme à l'oral (D-047). */
+  companionLang: RaiLang;
+  /** Sous-titres en français sous la bulle, quand Rai parle une autre langue. */
+  companionSubtitles: boolean;
   /** Aucune bulle ni voix pendant un focus, sauf à la fin. */
   companionDiscreet: boolean;
   /** Pendant les pauses, Rai change parfois de place, puis revient (D-045). */

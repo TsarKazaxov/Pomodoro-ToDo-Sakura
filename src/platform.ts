@@ -191,9 +191,11 @@ export const lastInputAt = () => lastInput;
 export const setHitRects = (rects: [number, number, number, number][]) =>
   call("set_hit_rects", { rects });
 
-/** Voix de Rai (D-044) : chaque partie dans sa langue, à la suite. */
+/** Voix de macOS pour Rai (D-044) : chaque partie dans sa langue, à la suite. */
 export const speak = (parts: { text: string; lang: string }[], volume: number) =>
   call("speak", { parts, volume });
+
+export const stopSpeaking = () => call("stop_speaking");
 
 /** Donne le focus au widget : un clic ailleurs le fera alors se replier (D-041). */
 export async function focusWidget(): Promise<void> {

@@ -1,5 +1,6 @@
 // Onglet Réglages (brief §4) : durées, cycle, barème, coin, son, thème, démarrage, données.
 
+import { clipCount } from "../companion/voiceClips";
 import { daysLabel, expectedPomodoros } from "../core/effort";
 import { useState } from "react";
 import { parseDataFile, serialize } from "../core/schema";
@@ -7,9 +8,9 @@ import { dayKeyAt } from "../core/time";
 import {
   CORNERS,
   SIZES,
-  COMPANION_LANGS,
+  RAI_LANGS,
   THEMES,
-  type CompanionLang,
+  type RaiLang,
   type Corner,
   type DataFile,
   type Settings,
@@ -223,7 +224,9 @@ export function SettingsTab({ data }: { data: DataFile }) {
           <label htmlFor="s-rai-voice">
             Voix de Rai
             <small className={styles.settingHint}>
-              Il dit la réplique à voix haute (voix de macOS).
+              {clipCount(s.companionLang) > 0
+                ? "Sa voix enregistrée ; la voix de macOS pour ce qui n'est pas enregistré."
+                : "Pas encore de voix enregistrée dans cette langue : voix de macOS."}
             </small>
           </label>
           <input
@@ -235,35 +238,39 @@ export function SettingsTab({ data }: { data: DataFile }) {
           />
         </div>
         <div className={styles.settingRow}>
-          <span>
-            Langue de la traduction
-            <small className={styles.settingHint}>Pour le texte et pour la voix.</small>
-          </span>
-          <div className={styles.seg} role="group" aria-label="Langue de la traduction">
-            {COMPANION_LANGS.map((l) => (
-              <button
-                key={l}
-                aria-pressed={s.companionLang === l}
-                onClick={() => set({ companionLang: l })}
-              >
+          <label htmlFor="s-rai-lang">
+            Langue de Rai
+            <small className={styles.settingHint}>
+              Une seule à la fois, pour le texte et pour la voix.
+            </small>
+          </label>
+          <select
+            id="s-rai-lang"
+            className={styles.select}
+            value={s.companionLang}
+            onChange={(e) => set({ companionLang: e.target.value as RaiLang })}
+          >
+            {RAI_LANGS.map((l) => (
+              <option key={l} value={l}>
                 {LANG_LABEL[l]}
-              </button>
+              </option>
             ))}
-          </div>
+          </select>
         </div>
         <div className={styles.settingRow}>
-          <label htmlFor="s-rai-ja">
-            Japonais en premier
+          <label htmlFor="s-rai-sub">
+            Sous-titres en français
             <small className={styles.settingHint}>
-              La réplique en japonais, puis sa traduction.
+              En petit sous sa réplique, quand il parle une autre langue. Écrits seulement.
             </small>
           </label>
           <input
-            id="s-rai-ja"
+            id="s-rai-sub"
             type="checkbox"
             className={styles.switch}
-            checked={s.companionJapanese}
-            onChange={(e) => set({ companionJapanese: e.target.checked })}
+            checked={s.companionSubtitles}
+            disabled={s.companionLang === "fr"}
+            onChange={(e) => set({ companionSubtitles: e.target.checked })}
           />
         </div>
         <div className={styles.settingRow}>
@@ -501,10 +508,12 @@ function NumberRow(props: {
   );
 }
 
-const LANG_LABEL: Record<CompanionLang, string> = {
+const LANG_LABEL: Record<RaiLang, string> = {
+  ja: "日本語 · japonais",
+  es: "Español · espagnol",
+  ru: "Русский · russe",
   fr: "Français",
-  en: "English",
-  none: "Aucune",
+  en: "English · anglais",
 };
 
 const CORNER_LABEL: Record<Corner, string> = {

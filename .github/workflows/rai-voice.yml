@@ -1,0 +1,43 @@
+# Voix de Rai (D-047) : enregistre les répliques avec ElevenLabs quand la voix choisie
+# (src/assets/rai/voice/voice.json) ou les répliques changent, puis commite les clips.
+# Nécessite le secret de dépôt ELEVENLABS_API_KEY ; sans lui, ne fait rien.
+name: Voix de Rai
+
+on:
+  push:
+    paths:
+      - src/assets/rai/voice/voice.json
+      - src/companion/lines.ts
+      - scripts/rai-voice.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rai-voice-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enregistrer les clips manquants
+        run: node --experimental-strip-types scripts/rai-voice.mjs
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      - name: Commiter les clips
+        run: |
+          git add src/assets/rai/voice
+          if git diff --cached --quiet; then
+            echo "Aucun nouveau clip."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Voix de Rai : clips ElevenLabs"
+          git push

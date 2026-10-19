@@ -24,6 +24,21 @@ describe("schéma", () => {
     expect(r.ok && r.data.settings).toEqual({ ...defaultSettings(), focusMinutes: 50 });
   });
 
+  it("langue de Rai : un ancien réglage (japonais + traduction) devient une seule langue", () => {
+    const read = (patch: Record<string, unknown>) => {
+      const d = JSON.parse(serialize(createEmptyData("mac-a", T0)));
+      delete d.settings.companionLang;
+      Object.assign(d.settings, patch);
+      const r = parseDataFile(JSON.stringify(d));
+      return r.ok ? r.data.settings.companionLang : null;
+    };
+    expect(read({ companionLang: "fr", companionJapanese: true })).toBe("ja");
+    expect(read({ companionLang: "en", companionJapanese: false })).toBe("en");
+    expect(read({ companionLang: "none", companionJapanese: false })).toBe("ja");
+    expect(read({ companionLang: "ru" })).toBe("ru");
+    expect(read({ companionLang: "de" })).toBe("ja");
+  });
+
   it("ramène un réglage hors limites à sa valeur par défaut", () => {
     const d = JSON.parse(serialize(createEmptyData("mac-a", T0)));
     d.settings.focusMinutes = -3;

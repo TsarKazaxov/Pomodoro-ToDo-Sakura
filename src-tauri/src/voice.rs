@@ -1,5 +1,5 @@
-//! Voix de Rai (D-044) : la commande `say` de macOS, une voix par langue (japonais puis
-//! traduction). Une nouvelle réplique coupe la précédente.
+//! Voix de macOS pour Rai (D-044, D-047) : la commande `say`, une voix par langue. Sert quand
+//! aucun clip enregistré n'existe pour la réplique. Une nouvelle réplique coupe la précédente.
 
 use std::process::{Child, Command};
 use std::sync::Mutex;
@@ -7,7 +7,7 @@ use std::sync::Mutex;
 #[derive(serde::Deserialize, Clone)]
 pub struct Part {
     pub text: String,
-    /// "ja", "fr" ou "en".
+    /// "ja", "es", "ru", "fr" ou "en".
     pub lang: String,
 }
 
@@ -44,6 +44,20 @@ pub fn pick_voice(voices: &[(String, String)], lang: &str) -> Option<String> {
             "Amélie",
             "Audrey",
         ],
+        "es" => &[
+            "Jorge (Enhanced)",
+            "Jorge",
+            "Mónica (Enhanced)",
+            "Mónica",
+            "Paulina",
+        ],
+        "ru" => &[
+            "Yuri (Enhanced)",
+            "Yuri",
+            "Milena (Enhanced)",
+            "Milena",
+            "Katya",
+        ],
         _ => &[
             "Samantha (Enhanced)",
             "Daniel (Enhanced)",
@@ -60,6 +74,8 @@ pub fn pick_voice(voices: &[(String, String)], lang: &str) -> Option<String> {
     let region = match lang {
         "ja" => "ja_JP",
         "fr" => "fr_FR",
+        "es" => "es_ES",
+        "ru" => "ru_RU",
         _ => "en_US",
     };
     voices
@@ -169,10 +185,14 @@ mod tests {
             ("Thomas".to_string(), "fr_FR".to_string()),
             ("Kyoko".to_string(), "ja_JP".to_string()),
             ("Fred".to_string(), "en_US".to_string()),
+            ("Paulina".to_string(), "es_MX".to_string()),
+            ("Milena".to_string(), "ru_RU".to_string()),
         ];
         assert_eq!(pick_voice(&v, "ja").as_deref(), Some("Kyoko"));
         assert_eq!(pick_voice(&v, "fr").as_deref(), Some("Thomas"));
         assert_eq!(pick_voice(&v, "en").as_deref(), Some("Fred"));
+        assert_eq!(pick_voice(&v, "es").as_deref(), Some("Paulina"));
+        assert_eq!(pick_voice(&v, "ru").as_deref(), Some("Milena"));
         assert_eq!(pick_voice(&[], "ja"), None);
     }
 }
