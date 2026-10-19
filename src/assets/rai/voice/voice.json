@@ -1,5 +1,5 @@
 {
-  "voiceId": "",
+  "voiceId": "J7ofLPW8TeJRehZkTG4q",
   "model": "eleven_multilingual_v2",
   "langs": ["ja", "es", "ru", "fr", "en"],
   "settings": {
