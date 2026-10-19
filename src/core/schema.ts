@@ -52,7 +52,6 @@ export function defaultSettings(): Settings {
     companionVoice: true,
     companionLang: "ja",
     companionSubtitles: true,
-    companionDiscreet: false,
     companionWander: true,
     onboarded: false,
   };
@@ -216,8 +215,6 @@ function readSettings(v: unknown): Settings {
     companionLang: readRaiLang(v, d.companionLang),
     companionSubtitles:
       typeof v.companionSubtitles === "boolean" ? v.companionSubtitles : d.companionSubtitles,
-    companionDiscreet:
-      typeof v.companionDiscreet === "boolean" ? v.companionDiscreet : d.companionDiscreet,
     companionWander: typeof v.companionWander === "boolean" ? v.companionWander : d.companionWander,
     onboarded: v.onboarded === true,
   };

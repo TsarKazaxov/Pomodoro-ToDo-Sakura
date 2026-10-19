@@ -1,7 +1,10 @@
 // Comportement de Rai (D-044), sans effet de bord : à chaque seconde, l'état du minuteur et ton
 // activité donnent son humeur (pose continue) ; les événements (tâche cochée, fin de focus, clic…)
-// déclenchent des réactions brèves. Il parle avec parcimonie : une réplique toutes les 3 min au
-// plus, sauf pour les moments importants.
+// déclenchent des réactions brèves.
+//
+// Parole (D-048) : il ne parle que lorsque c'est utile ou que tu l'as cherché — fin du focus, fin
+// de la pause, tâche cochée, clic sur lui, bulletin du soir. Le reste (travail, sommeil, forme
+// super, impatience, balade) se voit à sa pose, en silence : jamais de voix au milieu d'un focus.
 
 import { LINES, type Reaction } from "./lines";
 
@@ -42,7 +45,6 @@ export interface Tick {
   day: string;
   /** Pomodoros terminés aujourd'hui. */
   pomodorosToday: number;
-  discreet: boolean;
 }
 
 export interface Bubble {
@@ -58,14 +60,12 @@ export interface CompanionState {
   moodSince: number;
   /** Phase du minuteur au tick précédent. */
   lastPhase: Tick["phase"];
-  /** Minuteur à l'arrêt depuis… ; et s'il s'est arrêté au sortir d'une pause. */
+  /** Minuteur à l'arrêt depuis… */
   idleSince: number;
-  afterBreak: boolean;
   /** Réaction brève en cours (pose imposée jusqu'à `until`). */
   act: { pose: Pose; until: number } | null;
   bubble: Bubble | null;
   lastBubbleAt: number;
-  lastImpatientAt: number;
   /** Début de l'activité continue pendant le focus (série vers la forme super). */
   activeSince: number | null;
   asleep: boolean;
@@ -83,31 +83,21 @@ export const WAKE_UNDER_MS = 5_000;
 export const STREAK_BREAK_MS = 2 * 60_000;
 export const SUPER_AFTER_MS = 10 * 60_000;
 export const IMPATIENT_AFTER_MS = 2 * 60_000;
-export const IMPATIENT_EVERY_MS = 10 * 60_000;
+/** Délai minimal entre deux répliques de tâche cochée (les pétales fêtent les suivantes). */
 export const BUBBLE_COOLDOWN_MS = 3 * 60_000;
 export const BUBBLE_MS = 5_000;
 export const REPORT_HOUR = 18;
 
-/** Réactions qui passent toujours (sauf mode discret pendant un focus, pour la plupart). */
-const IMPORTANT: ReadonlySet<Reaction> = new Set([
-  "transform",
-  "super",
-  "wake",
-  "focusEnd",
-  "breakEnd",
-  "taskDone",
-  "dodge",
-  "poke",
-  "report",
-]);
+/** Réplique à chaque fois ; les autres (tâche cochée) attendent 3 min après la précédente. */
+const ALWAYS: ReadonlySet<Reaction> = new Set(["focusEnd", "breakEnd", "poke", "report"]);
 
-const ACTS: Record<CompanionEvent["type"], { pose: Pose; ms: number; reaction: Reaction }> = {
+const ACTS: Record<CompanionEvent["type"], { pose: Pose; ms: number; reaction?: Reaction }> = {
   taskDone: { pose: "victoire", ms: 2_400, reaction: "taskDone" },
   focusEnd: { pose: "reveil", ms: 3_000, reaction: "focusEnd" },
   breakEnd: { pose: "reveil", ms: 2_500, reaction: "breakEnd" },
   poke: { pose: "sursaut", ms: 1_400, reaction: "poke" },
-  linger: { pose: "esquive", ms: 800, reaction: "dodge" },
-  wander: { pose: "esquive", ms: 800, reaction: "wander" },
+  linger: { pose: "esquive", ms: 800 },
+  wander: { pose: "esquive", ms: 800 },
 };
 
 export function initialCompanion(now: number, day: string): CompanionState {
@@ -116,11 +106,9 @@ export function initialCompanion(now: number, day: string): CompanionState {
     moodSince: now,
     lastPhase: "idle",
     idleSince: now,
-    afterBreak: false,
     act: null,
     bubble: null,
     lastBubbleAt: -Infinity,
-    lastImpatientAt: -Infinity,
     activeSince: null,
     asleep: false,
     superOn: false,
@@ -138,9 +126,7 @@ function say(
   reaction: Reaction,
   vars?: Record<string, string | number>,
 ): CompanionState {
-  const important = IMPORTANT.has(reaction);
-  if (!important && t.now - s.lastBubbleAt < BUBBLE_COOLDOWN_MS) return s;
-  if (t.discreet && t.phase === "focus" && reaction !== "focusEnd") return s;
+  if (!ALWAYS.has(reaction) && t.now - s.lastBubbleAt < BUBBLE_COOLDOWN_MS) return s;
   const n = LINES[reaction].length;
   const variant = (s.variants[reaction] ?? 0) % n;
   const ms = reaction === "report" ? 9_000 : BUBBLE_MS;
@@ -159,21 +145,17 @@ export function step(prev: CompanionState, t: Tick, events: CompanionEvent[] = [
   if (s.act && s.act.until <= t.now) s = { ...s, act: null };
   if (s.bubble && s.bubble.until <= t.now) s = { ...s, bubble: null };
 
-  if (t.phase !== s.lastPhase && t.phase === "idle")
-    s = { ...s, idleSince: t.now, afterBreak: s.lastPhase === "break" };
+  if (t.phase !== s.lastPhase && t.phase === "idle") s = { ...s, idleSince: t.now };
   const running = t.phase === "focus" && !t.paused;
   const idle = t.idleMs ?? 0;
 
-  // Sommeil pendant un focus sans activité, réveil en sursaut quand tu reviens.
+  // Sommeil pendant un focus sans activité, réveil en sursaut quand tu reviens (en silence :
+  // tu reprends le travail, ce n'est pas le moment de te parler).
   if (running && !s.asleep && t.idleMs !== null && idle >= SLEEP_AFTER_MS) {
     s = { ...s, asleep: true, naps: s.naps + 1 };
-    s = say(s, t, "sleep");
   } else if (s.asleep && (!running || idle < WAKE_UNDER_MS)) {
     s = { ...s, asleep: false };
-    if (running) {
-      s = { ...s, act: { pose: "sursaut", until: t.now + 2_200 } };
-      s = say(s, t, "wake");
-    }
+    if (running) s = { ...s, act: { pose: "sursaut", until: t.now + 2_200 } };
   }
 
   // Série d'activité pendant le focus : au bout de 10 min, ou en prolongation, forme super.
@@ -192,7 +174,6 @@ export function step(prev: CompanionState, t: Tick, events: CompanionEvent[] = [
       transforms: s.transforms + 1,
       act: { pose: "transfo", until: t.now + 1_800 },
     };
-    s = say(s, t, t.overtime ? "super" : "transform");
   } else if (superOn !== s.superOn) s = { ...s, superOn };
 
   // Humeur de fond.
@@ -210,24 +191,13 @@ export function step(prev: CompanionState, t: Tick, events: CompanionEvent[] = [
         : t.now - s.idleSince >= IMPATIENT_AFTER_MS
           ? "impatient"
           : "idle";
-  if (mood !== s.mood) {
-    const from = s.mood;
-    s = { ...s, mood, moodSince: t.now };
-    if (mood === "focus" && from !== "super" && from !== "sleep" && from !== "paused")
-      s = say(s, t, "focus");
-    if (mood === "break") s = say(s, t, "break");
-  }
-  // Il s'impatiente, mais seulement si tu es là pour l'entendre.
-  if (s.mood === "impatient" && idle < 60_000 && t.now - s.lastImpatientAt >= IMPATIENT_EVERY_MS) {
-    const said = say(s, t, s.afterBreak ? "longBreak" : "impatient");
-    if (said !== s) s = { ...said, lastImpatientAt: t.now };
-  }
+  if (mood !== s.mood) s = { ...s, mood, moodSince: t.now };
 
   // Événements.
   for (const e of events) {
     const a = ACTS[e.type];
     s = { ...s, act: { pose: a.pose, until: t.now + a.ms } };
-    s = say(s, t, a.reaction);
+    if (a.reaction) s = say(s, t, a.reaction);
   }
 
   // Bulletin du soir, une fois par jour, quand tu es là et pas en plein focus.

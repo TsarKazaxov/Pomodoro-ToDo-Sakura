@@ -384,7 +384,22 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - **Une seule langue** : japonais (par défaut), espagnol, russe, français ou anglais, pour le texte et pour la voix (Réglages → Rai → Langue de Rai). Toutes les répliques existent dans les cinq langues (test : mêmes variables partout).
 - **Sous-titres** : quand Rai ne parle pas français, sa réplique peut s'afficher en petit en français sous la bulle (écrit seulement, activé par défaut). En japonais, la lecture en romaji reste à côté.
 - **Ancien réglage** : « japonais en premier » activé → japonais ; sinon la langue de traduction (français ou anglais).
-- **Voix ElevenLabs** : une voix conçue par l'utilisateur (Voice Design, une seule voix pour les cinq langues, modèle Multilingual v2). Les répliques sont enregistrées une fois en clips MP3 (`scripts/rai-voice.mjs`, ≈ 3 100 caractères pour tout), par un workflow GitHub qui détient la clé en secret de dépôt et commite les clips. L'app joue le clip (Web Audio, volume des sons) si le manifeste confirme qu'il dit le texte actuel ; sinon, voix de macOS (ajout de voix espagnoles et russes). Procédure : `docs/mascotte/VOIX-ELEVENLABS.md`.
+- **Voix ElevenLabs** : une voix conçue par l'utilisateur (Voice Design, une seule voix pour les cinq langues, modèle Multilingual v2). Les répliques sont enregistrées une fois en clips MP3 (`scripts/rai-voice.mjs`, ≈ 3 100 caractères pour tout ; ≈ 900 depuis D-048), par un workflow GitHub qui détient la clé en secret de dépôt et commite les clips. L'app joue le clip (Web Audio, volume des sons) si le manifeste confirme qu'il dit le texte actuel ; sinon, voix de macOS (ajout de voix espagnoles et russes). Procédure : `docs/mascotte/VOIX-ELEVENLABS.md`.
 - **Pourquoi pas en direct** : clé dans l'app, réseau obligatoire, crédits consommés à chaque réplique. Les clips marchent hors ligne et ne mettent aucun secret dans le `.dmg`.
 - **Pourquoi je ne crée pas la voix moi-même** : le réseau de l'environnement de développement bloque api.elevenlabs.io, le compte est personnel, et le choix d'une voix se fait à l'oreille.
 - **Limite** : le bulletin du soir change chaque jour ; son clip ne dit que le titre, les chiffres restent dans la bulle.
+
+### D-048 · Rai ne parle que lorsque c'est utile
+- **Constat** (retour d'usage) : trop de répliques, redondantes ou moralisatrices (« La pause, c'est 5 min. Pas 5 ans. »). Chaque réplique interrompt : la bulle masque le minuteur 5 s, la voix coupe la concentration.
+- **Critère** : une réplique doit apporter une information que tu n'as pas déjà, ou répondre à un geste de ta part. Sinon, la pose suffit.
+- **Il parle encore** : fin du focus (la seule information vraiment utile, pause conseillée en une phrase), fin de la pause (neutre : « Fin de la pause. », sans « Au boulot ! »), tâche cochée (une fois toutes les 3 min au plus ; les suivantes sont fêtées par les pétales), clic sur lui (tu l'as cherché), bulletin du soir (une fois par jour).
+- **Il ne parle plus** (pose seulement) :
+  - début de focus — tu viens de cliquer « Démarrer », tu le sais ;
+  - début de pause — redit la fin du focus, annoncée une seconde plus tôt ;
+  - impatience et pause qui s'éternise — reproche, répété toutes les 10 min ; le minuteur arrêté peut être voulu (réunion, mails) ; la pose d'attente reste ;
+  - transformation et forme super — tombent au bout de 10 min de concentration, le pire moment pour interrompre ;
+  - sommeil — parlait à quelqu'un d'absent ; réveil — interrompait au moment où tu reprends (3 min sans clavier, c'est souvent lire ou réfléchir) ;
+  - esquive et balade — le mouvement suffit.
+- **Mode discret supprimé** : c'est désormais le comportement normal (aucune parole pendant un focus en dehors de tes gestes et de la fin).
+- **Phrases** : plus courtes, l'information d'abord, une seule idée, pas de reproche. Les poses et animations sont inchangées.
+- **Clips ElevenLabs** : 60 au lieu de 155 (≈ 900 caractères).

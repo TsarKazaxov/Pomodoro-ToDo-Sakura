@@ -288,21 +288,6 @@ export function SettingsTab({ data }: { data: DataFile }) {
             onChange={(e) => set({ companionWander: e.target.checked })}
           />
         </div>
-        <div className={styles.settingRow}>
-          <label htmlFor="s-rai-discreet">
-            Mode discret
-            <small className={styles.settingHint}>
-              Ni bulle ni voix pendant un focus, sauf à la fin.
-            </small>
-          </label>
-          <input
-            id="s-rai-discreet"
-            type="checkbox"
-            className={styles.switch}
-            checked={s.companionDiscreet}
-            onChange={(e) => set({ companionDiscreet: e.target.checked })}
-          />
-        </div>
       </fieldset>
 
       <fieldset className={styles.fieldset}>

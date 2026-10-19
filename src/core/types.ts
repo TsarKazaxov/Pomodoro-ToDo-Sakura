@@ -105,8 +105,6 @@ export interface Settings {
   companionLang: RaiLang;
   /** Sous-titres en français sous la bulle, quand Rai parle une autre langue. */
   companionSubtitles: boolean;
-  /** Aucune bulle ni voix pendant un focus, sauf à la fin. */
-  companionDiscreet: boolean;
   /** Pendant les pauses, Rai change parfois de place, puis revient (D-045). */
   companionWander: boolean;
   /** Premier lancement terminé. */

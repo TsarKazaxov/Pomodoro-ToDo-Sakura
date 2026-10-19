@@ -82,12 +82,12 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 
 **Rai (V1.1.0)**
 - [ ] Rai apparaît à côté du widget ; en haut au centre, la fiche est sous lui ; sur le bord gauche, il regarde vers l'écran.
-- [ ] Minuteur arrêté 2 min en bougeant la souris : il s'impatiente et le dit (dans la langue choisie, à l'écrit et à voix haute).
-- [ ] Focus : il travaille au clavier. 3 min sans toucher à rien : il s'endort (Zzz, bulle de morve). Bouge la souris : il sursaute, « J'dormais pas ! ».
+- [ ] Minuteur arrêté 2 min : il prend la pose d'attente, **sans rien dire**, même au bout de 30 min (V1.3.1).
+- [ ] Focus : il travaille au clavier. 3 min sans toucher à rien : il s'endort (Zzz, bulle de morve). Bouge la souris : il sursaute, **sans rien dire**. Un focus entier sans tâche cochée ni clic sur lui : aucune réplique (V1.3.1).
 - [ ] 10 min de focus actif (ou prolongation) : transformation dorée.
 - [ ] Coche une tâche : saut de victoire. Fin de focus : il brandit le réveil.
 - [ ] Clic sur Rai : il te taquine. Curseur immobile 2 s sur lui pendant un focus : il file de l'autre côté.
-- [ ] Réglages → Rai : voix coupée → plus de son ; langue English → répliques en anglais ; Aucune → japonais seul ; mode discret → silence pendant le focus.
+- [ ] Réglages → Rai : voix coupée → plus de son ; langue English → répliques en anglais ; Aucune → japonais seul .
 - [ ] Cliquer dans le vide juste à côté de Rai ou sous la fiche : le clic atteint l'app en dessous (V1.1.1).
 - [ ] Pendant une pause, sans toucher à rien 3 min : Rai change de place ; à la fin de la pause, il revient (V1.1.1).
 - [ ] Moniteur d'activité, focus en cours : CPU toujours < 2 %.
@@ -98,6 +98,10 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Prendre une sous-tâche comme tâche en cours, lancer un focus de 1 min : la barre du widget avance pour la sous-tâche et pour le projet.
 - [ ] En pause, fiche repliée : « Reste … · Projet » (ou « Dépassé de … »).
 - [ ] Ancien fichier de données (V1.1) : le barème relu donne M = 1 h 40 (4 pomodoros × 25 min), rien n'est perdu.
+
+**Rai parle peu (V1.3.1)**
+- [ ] Il ne parle qu'à la fin d'un focus, à la fin d'une pause, quand tu coches une tâche (une fois toutes les 3 min au plus), quand tu cliques sur lui, et au bulletin du soir.
+- [ ] Début de focus, début de pause, transformation, sommeil, balade : pose seulement, aucune bulle.
 
 **Langue de Rai (V1.3.0)**
 - [ ] Réglages → Rai → Langue de Rai : Русский. Clique sur Rai : il répond en russe, à l'écrit et à voix haute (voix russe de macOS si aucun clip), avec le sous-titre français en petit.

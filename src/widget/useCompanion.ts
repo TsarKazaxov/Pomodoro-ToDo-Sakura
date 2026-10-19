@@ -71,7 +71,6 @@ export function useCompanion(data: DataFile, now: number) {
         hour: new Date(now).getHours(),
         day: today,
         pomodorosToday,
-        discreet: s.companionDiscreet,
       },
       events,
     );

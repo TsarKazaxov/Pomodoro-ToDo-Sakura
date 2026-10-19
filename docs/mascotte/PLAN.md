@@ -37,7 +37,7 @@ Rendre le Pomodoro **drôle et impossible à oublier**, sans gêner : Rai vit au
 | salut | salut | 4ᵉ pomodoro du cycle | haute |
 | bulletin | bulletin | première ouverture après 18 h, une fois par jour | moyenne |
 
-Règles anti-saturation : une bulle toutes les 3 min au plus (sauf priorité haute) ; mode discret = aucune bulle ni voix pendant un focus, sauf fin de focus ; bulle 5 s.
+Règles anti-saturation : une bulle toutes les 3 min au plus (sauf priorité haute) ; mode discret = aucune bulle ni voix pendant un focus, sauf fin de focus ; bulle 5 s. **Remplacé par D-048** : il ne parle plus qu'en fin de focus, fin de pause, tâche cochée, clic sur lui et bulletin du soir ; le mode discret n'existe plus.
 
 ## Architecture (à implémenter)
 

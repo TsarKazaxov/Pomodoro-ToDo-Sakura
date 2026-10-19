@@ -5,7 +5,7 @@ Rai). Par défaut, il utilise la voix de macOS. Avec ElevenLabs, chaque répliqu
 fois pour toutes, avec **une seule voix pour les cinq langues** : c'est le même personnage qui
 parle japonais, espagnol ou russe.
 
-Budget : toutes les répliques dans les cinq langues font environ **3 100 caractères**, à générer
+Budget : toutes les répliques dans les cinq langues font environ **900 caractères** (60 clips), à générer
 une seule fois. Le plan gratuit d'ElevenLabs suffit en principe (environ 10 000 caractères par
 mois, à vérifier sur leur page de tarifs). Avec le plan gratuit, l'usage doit rester personnel.
 
@@ -64,5 +64,5 @@ voix (nouvel ID) refait tout.
 ## Pourquoi pas ElevenLabs en direct dans l'app
 
 Il faudrait la clé dans l'app, une connexion Internet, et chaque réplique coûterait des crédits.
-Les clips enregistrés une fois coûtent ~3 100 caractères, marchent hors ligne et ne laissent
+Les clips enregistrés une fois coûtent ~900 caractères, marchent hors ligne et ne laissent
 aucun secret dans le `.dmg`.

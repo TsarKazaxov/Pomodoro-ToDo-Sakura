@@ -1,229 +1,75 @@
-// Répliques de Rai (D-044, D-047) : une seule langue à la fois, au choix (japonais, espagnol,
-// russe, français, anglais). Plusieurs variantes par réaction, tirées à tour de rôle.
+// Répliques de Rai (D-044, D-047, D-048) : une seule langue à la fois, au choix (japonais,
+// espagnol, russe, français, anglais). Plusieurs variantes par réaction, tirées à tour de rôle.
 // Ce fichier est aussi lu par `scripts/rai-voice.mjs` (clips ElevenLabs) : pas d'import
 // autre que de types.
 
 import type { RaiLang } from "../core/types";
 
-export type Reaction =
-  | "impatient"
-  | "longBreak"
-  | "focus"
-  | "transform"
-  | "super"
-  | "sleep"
-  | "wake"
-  | "focusEnd"
-  | "break"
-  | "breakEnd"
-  | "taskDone"
-  | "dodge"
-  | "poke"
-  | "wander"
-  | "report";
+export type Reaction = "focusEnd" | "breakEnd" | "taskDone" | "poke" | "report";
 
 export type Line = Record<RaiLang, string> & {
   /** Lecture du japonais, en petit à côté. */
   romaji: string;
 };
 
+/**
+ * D-048 : seulement ce qui t'apprend quelque chose (fin de focus, fin de pause), ce que tu as
+ * fait (tâche cochée), ce que tu as cherché (clic sur Rai) et le bulletin du soir. Phrases
+ * courtes : l'information d'abord, une seule idée, pas de reproche.
+ */
 export const LINES: Record<Reaction, Line[]> = {
-  impatient: [
-    {
-      ja: "まだかよ〜？",
-      romaji: "Mada ka yo~?",
-      fr: "On attend quoi, la retraite ?",
-      en: "What are we waiting for, retirement?",
-      es: "¿A qué esperamos, a la jubilación?",
-      ru: "Чего ждём, пенсии?",
-    },
-    {
-      ja: "暇だなぁ…",
-      romaji: "Hima da naa…",
-      fr: "Je m'ennuie, là.",
-      en: "I'm so bored.",
-      es: "Me aburro, eh.",
-      ru: "Скукота…",
-    },
-    {
-      ja: "始めようぜ！",
-      romaji: "Hajimeyō ze!",
-      fr: "Allez, on lance un focus ?",
-      en: "Come on, let's start a focus?",
-      es: "Venga, ¿empezamos un focus?",
-      ru: "Ну что, начнём фокус?",
-    },
-  ],
-  longBreak: [
-    {
-      ja: "長いぞ！",
-      romaji: "Nagai zo!",
-      fr: "La pause, c'est 5 min. Pas 5 ans.",
-      en: "A break is 5 minutes. Not 5 years.",
-      es: "La pausa son 5 minutos. No 5 años.",
-      ru: "Перерыв — 5 минут. Не 5 лет.",
-    },
-    {
-      ja: "おーい、戻ってこい！",
-      romaji: "Ōi, modotte koi!",
-      fr: "Ohé ! On revient au boulot ?",
-      en: "Hey! Back to work?",
-      es: "¡Eh! ¿Volvemos al curro?",
-      ru: "Эй! Возвращаемся к работе?",
-    },
-  ],
-  focus: [
-    {
-      ja: "集中！",
-      romaji: "Shūchū!",
-      fr: "Chut. Je code.",
-      en: "Shh. I'm coding.",
-      es: "Chis. Estoy programando.",
-      ru: "Тсс. Я работаю.",
-    },
-    {
-      ja: "行くぞ！",
-      romaji: "Iku zo!",
-      fr: "C'est parti !",
-      en: "Here we go!",
-      es: "¡Allá vamos!",
-      ru: "Поехали!",
-    },
-    {
-      ja: "本気出すか。",
-      romaji: "Honki dasu ka.",
-      fr: "Bon. On s'y met pour de vrai.",
-      en: "Alright. For real this time.",
-      es: "Venga. Esta vez en serio.",
-      ru: "Ладно. Теперь всерьёз.",
-    },
-  ],
-  transform: [
-    {
-      ja: "本気モード！",
-      romaji: "Honki mōdo!",
-      fr: "Ce niveau de concentration… c'est illégal.",
-      en: "This level of focus should be illegal.",
-      es: "Este nivel de concentración… es ilegal.",
-      ru: "Такая концентрация… это незаконно.",
-    },
-    {
-      ja: "覚醒！",
-      romaji: "Kakusei!",
-      fr: "Mode éveil activé !",
-      en: "Awakening mode on!",
-      es: "¡Modo despertar activado!",
-      ru: "Режим пробуждения включён!",
-    },
-  ],
-  super: [
-    {
-      ja: "まだやるのか！？",
-      romaji: "Mada yaru no ka!?",
-      fr: "Encore ? T'es un monstre.",
-      en: "Still going? You're a monster.",
-      es: "¿Todavía? Eres un monstruo.",
-      ru: "Всё ещё? Ты монстр.",
-    },
-    {
-      ja: "止まらねぇ！",
-      romaji: "Tomaranē!",
-      fr: "Rien ne t'arrête !",
-      en: "Nothing can stop you!",
-      es: "¡Nada te detiene!",
-      ru: "Тебя не остановить!",
-    },
-  ],
-  sleep: [
-    {
-      ja: "すやすや…",
-      romaji: "Suya suya…",
-      fr: "Zzz… travail profond. Très profond.",
-      en: "Zzz… deep work. Very deep.",
-      es: "Zzz… trabajo profundo. Muy profundo.",
-      ru: "Хррр… глубокая работа. Очень глубокая.",
-    },
-    {
-      ja: "ぐーぐー…",
-      romaji: "Gū gū…",
-      fr: "Zzz… réveille-moi quand tu bosses.",
-      en: "Zzz… wake me when you're working.",
-      es: "Zzz… despiértame cuando trabajes.",
-      ru: "Хррр… разбуди, когда начнёшь работать.",
-    },
-  ],
-  wake: [
-    {
-      ja: "寝てないし！",
-      romaji: "Netenai shi!",
-      fr: "J'dormais pas ! Je… méditais.",
-      en: "I wasn't sleeping! I was… meditating.",
-      es: "¡No dormía! Estaba… meditando.",
-      ru: "Я не спал! Я… медитировал.",
-    },
-    {
-      ja: "はっ！",
-      romaji: "Ha!",
-      fr: "Hein ? Quoi ? J'suis là !",
-      en: "Huh? What? I'm here!",
-      es: "¿Eh? ¿Qué? ¡Estoy aquí!",
-      ru: "А? Что? Я здесь!",
-    },
-  ],
   focusEnd: [
     {
       ja: "休憩だ！",
       romaji: "Kyūkei da!",
-      fr: "Driiing ! Pause, ordre du sensei.",
-      en: "Riiing! Break time, sensei's orders.",
-      es: "¡Riiing! Pausa, órdenes del sensei.",
-      ru: "Дзынь! Перерыв, приказ сэнсэя.",
+      fr: "Pause ! Lâche le clavier.",
+      en: "Break! Let go of the keyboard.",
+      es: "¡Pausa! Suelta el teclado.",
+      ru: "Перерыв! Отпусти клавиатуру.",
     },
     {
       ja: "よくやった！",
       romaji: "Yoku yatta!",
-      fr: "Bien joué ! Pause méritée.",
-      en: "Well done! You earned a break.",
-      es: "¡Bien hecho! Te has ganado la pausa.",
-      ru: "Молодец! Перерыв заслужен.",
-    },
-  ],
-  break: [
-    {
-      ja: "いただきます！",
-      romaji: "Itadakimasu!",
-      fr: "Onigiri time. Lâche ce clavier.",
-      en: "Onigiri time. Drop that keyboard.",
-      es: "Hora del onigiri. Suelta el teclado.",
-      ru: "Время онигири. Отпусти клавиатуру.",
+      fr: "Bien joué. Pause.",
+      en: "Nice work. Break time.",
+      es: "Bien hecho. Pausa.",
+      ru: "Отлично. Перерыв.",
     },
     {
       ja: "ひと休み〜",
       romaji: "Hito yasumi~",
-      fr: "Étire-toi, bois un verre d'eau.",
-      en: "Stretch, drink some water.",
-      es: "Estírate, bebe un vaso de agua.",
-      ru: "Потянись, выпей воды.",
+      fr: "Pause. Lève-toi, étire-toi.",
+      en: "Break. Get up, stretch.",
+      es: "Pausa. Levántate y estírate.",
+      ru: "Перерыв. Встань, потянись.",
     },
   ],
   breakEnd: [
     {
-      ja: "さあ、戻るぞ！",
-      romaji: "Saa, modoru zo!",
-      fr: "Fin de la pause. Au boulot !",
-      en: "Break's over. Back to work!",
-      es: "Se acabó la pausa. ¡A currar!",
-      ru: "Перерыв окончен. За работу!",
+      ja: "休憩おわり。",
+      romaji: "Kyūkei owari.",
+      fr: "Fin de la pause.",
+      en: "Break's over.",
+      es: "Se acabó la pausa.",
+      ru: "Перерыв окончен.",
+    },
+    {
+      ja: "準備いい？",
+      romaji: "Junbi ii?",
+      fr: "Pause finie. On relance ?",
+      en: "Break's done. Ready?",
+      es: "Pausa terminada. ¿Seguimos?",
+      ru: "Перерыв всё. Продолжим?",
     },
   ],
   taskDone: [
     {
       ja: "やった！",
       romaji: "Yatta!",
-      fr: "Et de une ! Qui est le boss ?",
-      en: "One down! Who's the boss?",
-      es: "¡Una menos! ¿Quién manda aquí?",
-      ru: "Минус одна! Кто тут босс?",
+      fr: "Et de une !",
+      en: "One down!",
+      es: "¡Una menos!",
+      ru: "Минус одна!",
     },
     {
       ja: "最高！",
@@ -240,24 +86,6 @@ export const LINES: Record<Reaction, Line[]> = {
       en: "Next!",
       es: "¡Siguiente!",
       ru: "Следующая!",
-    },
-  ],
-  dodge: [
-    {
-      ja: "失礼！",
-      romaji: "Shitsurei!",
-      fr: "Oups, je gêne ? J'me tire.",
-      en: "Oops, in your way? I'm out.",
-      es: "Uy, ¿molesto? Me piro.",
-      ru: "Ой, мешаю? Ухожу.",
-    },
-    {
-      ja: "じゃあな！",
-      romaji: "Jā na!",
-      fr: "Je bouge, je bouge !",
-      en: "Moving, moving!",
-      es: "¡Me muevo, me muevo!",
-      ru: "Двигаюсь, двигаюсь!",
     },
   ],
   poke: [
@@ -277,23 +105,13 @@ export const LINES: Record<Reaction, Line[]> = {
       es: "¡Eh, que me haces cosquillas!",
       ru: "Эй, щекотно!",
     },
-  ],
-  wander: [
     {
-      ja: "ぶらぶら〜",
-      romaji: "Bura bura~",
-      fr: "Je me dégourdis les pattes.",
-      en: "Just stretching my legs.",
-      es: "Estirando las patas.",
-      ru: "Разминаю лапы.",
-    },
-    {
-      ja: "ちょっと散歩！",
-      romaji: "Chotto sanpo!",
-      fr: "Petite balade, je reviens.",
-      en: "Quick stroll, be right back.",
-      es: "Paseíto rápido, ahora vuelvo.",
-      ru: "Небольшая прогулка, скоро вернусь.",
+      ja: "暇なの？",
+      romaji: "Hima na no?",
+      fr: "T'as pas du travail, toi ?",
+      en: "Don't you have work to do?",
+      es: "¿No tienes trabajo?",
+      ru: "Тебе работать не надо?",
     },
   ],
   report: [

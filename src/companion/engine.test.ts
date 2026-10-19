@@ -26,7 +26,6 @@ function tick(over: Partial<Tick> = {}): Tick {
     hour: 10,
     day: "2026-10-18",
     pomodorosToday: 0,
-    discreet: false,
     ...over,
   };
 }
@@ -54,10 +53,10 @@ describe("Rai : humeur", () => {
     expect(isBlinking(T0 + 9_000 * 4 + 500)).toBe(true);
   });
 
-  it("focus lancé : il se met au travail et le dit", () => {
+  it("focus lancé : il se met au travail, sans rien dire", () => {
     const s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "focus" }));
     expect(poseOf(s, T0)).toBe("focus");
-    expect(s.bubble?.reaction).toBe("focus");
+    expect(s.bubble).toBeNull();
   });
 
   it("3 min sans clavier ni souris pendant un focus : il s'endort, puis sursaute à ton retour", () => {
@@ -70,7 +69,7 @@ describe("Rai : humeur", () => {
     s = step(s, tick({ now: back, phase: "focus", idleMs: 500 }));
     expect(s.asleep).toBe(false);
     expect(poseOf(s, back)).toBe("sursaut");
-    expect(s.bubble?.reaction).toBe("wake");
+    expect(s.bubble).toBeNull(); // tu reprends le travail : pas de bavardage
     expect(poseOf(s, back + 3_000)).toBe("focus");
   });
 
@@ -89,7 +88,7 @@ describe("Rai : humeur", () => {
     const now = T0 + SUPER_AFTER_MS + 1_000;
     expect(poseOf(s, now)).toBe("transfo");
     expect(poseOf(s, now + 2_000)).toBe("super");
-    expect(s.bubble?.reaction).toBe("transform");
+    expect(s.bubble).toBeNull(); // en plein focus : la transformation se voit, elle ne s'entend pas
   });
 
   it("une pause de 2 min dans l'activité remet la série à zéro", () => {
@@ -100,42 +99,37 @@ describe("Rai : humeur", () => {
     expect(s.superOn).toBe(false);
   });
 
-  it("prolongation : forme super immédiate, avec sa réplique", () => {
+  it("prolongation : forme super immédiate, en silence", () => {
     const s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "focus", overtime: true }));
     expect(s.superOn).toBe(true);
-    expect(s.bubble?.reaction).toBe("super");
+    expect(s.bubble).toBeNull();
   });
 
-  it("pause : onigiri", () => {
+  it("pause : onigiri, sans réplique (la fin du focus vient de l'annoncer)", () => {
     const s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "break" }));
     expect(poseOf(s, T0)).toBe("pause");
-    expect(s.bubble?.reaction).toBe("break");
-  });
-
-  it("minuteur arrêté depuis 2 min et tu es là : il s'impatiente, puis se tait 10 min", () => {
-    let s = initialCompanion(T0, "2026-10-18");
-    s = run(s, T0, 125, () => ({}));
-    expect(s.mood).toBe("impatient");
-    expect(s.bubble?.reaction).toBe("impatient");
-    const said = s.lastImpatientAt;
-    s = run(s, T0 + 125_000, 300, () => ({}));
-    expect(s.lastImpatientAt).toBe(said);
-  });
-
-  it("après une pause qui s'éternise, la réplique change", () => {
-    let s = initialCompanion(T0, "2026-10-18");
-    s = step(s, tick({ phase: "break" }));
-    // La réplique de pause vient d'être dite : celle-ci attend la fin du délai de 3 min.
-    s = run(s, T0 + 1000, 200, () => ({ phase: "idle" }));
-    expect(s.variants.longBreak).toBe(1);
-    expect(s.variants.impatient).toBeUndefined();
-  });
-
-  it("absent : il ne parle pas dans le vide", () => {
-    let s = initialCompanion(T0, "2026-10-18");
-    s = run(s, T0, 200, () => ({ idleMs: 10 * MIN }));
-    expect(s.mood).toBe("impatient");
     expect(s.bubble).toBeNull();
+  });
+
+  it("minuteur arrêté longtemps : il attend, mais ne te le reproche jamais", () => {
+    let s = initialCompanion(T0, "2026-10-18");
+    s = run(s, T0, 40 * 60, () => ({}));
+    expect(s.mood).toBe("impatient");
+    expect(poseOf(s, T0 + 40 * MIN)).toBe("attente");
+    expect(s.bubble).toBeNull();
+    expect(s.variants).toEqual({});
+  });
+
+  it("aucune réplique pendant tout un focus sans événement", () => {
+    let s = initialCompanion(T0, "2026-10-18");
+    // 25 min : activité, puis 4 min sans clavier (sommeil), retour, forme super.
+    s = run(s, T0, 25 * 60, (now) => ({
+      phase: "focus",
+      idleMs: now - T0 > 5 * MIN && now - T0 < 9 * MIN ? now - T0 - 5 * MIN : 1_000,
+    }));
+    expect(s.naps).toBe(1);
+    expect(s.transforms).toBe(1);
+    expect(s.variants).toEqual({});
   });
 });
 
@@ -147,41 +141,45 @@ describe("Rai : réactions et répliques", () => {
     expect(s.bubble?.reaction).toBe("taskDone");
   });
 
-  it("balade : il file, avec une réplique ordinaire", () => {
-    const s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "break" }), [
+  it("balade et esquive : il file, sans rien dire", () => {
+    let s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "break" }), [
       { type: "wander" },
     ]);
     expect(poseOf(s, T0 + 100)).toBe("esquive");
-    // La réplique de pause vient d'être dite : celle de balade attend son tour.
-    expect(s.bubble?.reaction).toBe("break");
+    expect(s.bubble).toBeNull();
+    s = step(s, tick({ now: T0 + 1000, phase: "focus" }), [{ type: "linger" }]);
+    expect(s.bubble).toBeNull();
   });
 
-  it("une réplique ordinaire attend 3 min après la précédente", () => {
-    let s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "focus" }));
-    s = step(s, tick({ now: T0 + 30_000, phase: "break" }));
-    expect(s.bubble).toBeNull(); // la réplique de pause est retenue
-    s = step(s, tick({ now: T0 + BUBBLE_COOLDOWN_MS + 1000, phase: "focus" }));
-    expect(s.bubble?.reaction).toBe("focus");
+  it("tâches cochées en rafale : une réplique, puis les pétales seuls pendant 3 min", () => {
+    let s = step(initialCompanion(T0, "2026-10-18"), tick(), [{ type: "taskDone" }]);
+    expect(s.bubble?.reaction).toBe("taskDone");
+    const first = s.bubble!.since;
+    s = step(s, tick({ now: T0 + 60_000 }), [{ type: "taskDone" }]);
+    expect(poseOf(s, T0 + 60_500)).toBe("victoire");
+    expect(s.bubble?.since ?? first).toBe(first);
+    s = step(s, tick({ now: T0 + BUBBLE_COOLDOWN_MS + 1000 }), [{ type: "taskDone" }]);
+    expect(s.bubble?.since).toBe(T0 + BUBBLE_COOLDOWN_MS + 1000);
   });
 
-  it("mode discret : rien pendant le focus, sauf la fin de session", () => {
-    let s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "focus", discreet: true }));
-    expect(s.bubble).toBeNull();
-    s = step(s, tick({ now: T0 + 1000, phase: "focus", discreet: true }), [{ type: "taskDone" }]);
-    expect(s.bubble).toBeNull();
-    expect(poseOf(s, T0 + 1500)).toBe("victoire");
-    s = step(s, tick({ now: T0 + 2000, phase: "focus", discreet: true }), [{ type: "focusEnd" }]);
-    expect(s.bubble?.reaction).toBe("focusEnd");
+  it("fin de focus, fin de pause et clic sur lui : toujours une réplique", () => {
+    let s = step(initialCompanion(T0, "2026-10-18"), tick({ phase: "focus" }), [
+      { type: "taskDone" },
+    ]);
+    for (const [i, type] of (["focusEnd", "breakEnd", "poke"] as const).entries()) {
+      s = step(s, tick({ now: T0 + (i + 1) * 1000 }), [{ type }]);
+      expect(s.bubble?.reaction).toBe(type);
+    }
   });
 
   it("les variantes tournent", () => {
     let s = initialCompanion(T0, "2026-10-18");
     const seen = new Set<number>();
-    for (let i = 0; i < LINES.taskDone.length; i++) {
-      s = step(s, tick({ now: T0 + i * 10_000 }), [{ type: "taskDone" }]);
+    for (let i = 0; i < LINES.poke.length; i++) {
+      s = step(s, tick({ now: T0 + i * 10_000 }), [{ type: "poke" }]);
       seen.add(s.bubble!.variant);
     }
-    expect(seen.size).toBe(LINES.taskDone.length);
+    expect(seen.size).toBe(LINES.poke.length);
   });
 
   it("bulletin du soir : une fois par jour, avec les chiffres du jour", () => {
@@ -219,7 +217,7 @@ describe("Rai : réactions et répliques", () => {
 
   it("clip du bulletin : le titre seul, sans chiffres", () => {
     expect(clipText("report", LINES.report[0]!, "es")).toBe("¡El boletín de hoy!");
-    expect(clipText("focus", LINES.focus[1]!, "ru")).toBe("Поехали!");
+    expect(clipText("focusEnd", LINES.focusEnd[1]!, "ru")).toBe("Отлично. Перерыв.");
   });
 
   it("appréciation et gabarit du bulletin", () => {
