@@ -81,7 +81,7 @@ describe("points par jour", () => {
   });
 
   it("suit le barème des réglages", () => {
-    const scale = { ...DEFAULT_SCALE, M: { points: 10, expectedPomodoros: 4 } };
+    const scale = { ...DEFAULT_SCALE, M: { points: 10, minutes: 100 } };
     expect(
       buildDayMap([task("M", "2026-10-05T10:00:00.000+02:00")], [], scale).get("2026-10-05")!
         .points,
@@ -160,8 +160,9 @@ describe("calibration", () => {
   });
 
   it("compare les pomodoros réels moyens aux attendus", () => {
-    const c = calibration(done("M", [5, 6, 6, 5, 6]), DEFAULT_SCALE).find((x) => x.size === "M")!;
-    expect(c.average).toBeCloseTo(5.6);
+    // M = 2 h de focus = 5 pomodoros de 25 min (D-046).
+    const c = calibration(done("M", [7, 7, 7, 7, 7]), DEFAULT_SCALE).find((x) => x.size === "M")!;
+    expect(c.average).toBeCloseTo(7);
     expect(c.ratio).toBeCloseTo(1.4);
     expect(c.verdict).toBe("underestimate");
   });
@@ -187,11 +188,13 @@ describe("calibration", () => {
     expect(calibration(tasks, DEFAULT_SCALE).find((x) => x.size === "S")!.count).toBe(4);
   });
 
-  it("utilise 12 comme attendu pour XL", () => {
-    const c = calibration(done("XL", [12, 12, 12, 12, 12]), DEFAULT_SCALE).find(
+  it("déduit les pomodoros attendus de la durée de la taille et du focus", () => {
+    const c = calibration(done("XL", [19, 19, 19, 19, 19]), DEFAULT_SCALE).find(
       (x) => x.size === "XL",
     )!;
-    expect(c).toMatchObject({ expected: 12, ratio: 1, verdict: "accurate" });
+    expect(c).toMatchObject({ expected: 19, ratio: 1, verdict: "accurate" }); // 8 h / 25 min
+    const c50 = calibration(done("XL", [10, 10, 10, 10, 10]), DEFAULT_SCALE, undefined, 50);
+    expect(c50.find((x) => x.size === "XL")).toMatchObject({ expected: 10, ratio: 1 });
   });
 });
 
@@ -226,7 +229,7 @@ describe("indicateurs", () => {
 
   it("conseille de découper une XL", () => {
     expect(shouldSplit(task("XL"), DEFAULT_SCALE)).toBe(true);
-    expect(shouldSplit(task("M", undefined, 13), DEFAULT_SCALE)).toBe(true);
+    expect(shouldSplit(task("M", undefined, 20), DEFAULT_SCALE)).toBe(true);
     expect(shouldSplit(task("M", undefined, 4), DEFAULT_SCALE)).toBe(false);
   });
 });

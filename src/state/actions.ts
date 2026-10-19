@@ -14,6 +14,8 @@ export type Action =
   /** `lastInputAt` : dernière activité clavier/souris, pour la prolongation (D-042). */
   | { type: "timer/tick"; lastInputAt?: number | null }
   | { type: "task/quickAdd"; raw: string; priority: boolean }
+  /** Sous-tâche d'une tâche (D-046) : `Maquette #S`. */
+  | { type: "task/addSubtask"; parentId: string; raw: string }
   | { type: "task/setStatus"; id: string; status: TaskStatus }
   | { type: "task/setCurrent"; id: string | null }
   | { type: "task/update"; id: string; patch: Partial<Pick<Task, "title" | "size" | "priority">> }
@@ -93,6 +95,15 @@ export function reduce(data: DataFile, action: Action, now: number): Reduced {
           ...data,
           tasks: addTask(data.tasks, { ...parsed, priority: action.priority }, now),
         },
+        effects: [],
+      };
+    }
+    case "task/addSubtask": {
+      const parsed = parseQuickAdd(action.raw);
+      const parent = data.tasks.find((t) => t.id === action.parentId);
+      if (!parsed || !parent || parent.parentId) return same;
+      return {
+        data: { ...data, tasks: addTask(data.tasks, { ...parsed, parentId: parent.id }, now) },
         effects: [],
       };
     }

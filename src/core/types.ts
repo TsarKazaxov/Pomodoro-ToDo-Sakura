@@ -21,6 +21,8 @@ export interface Task {
   completedAt?: LocalIso;
   /** Incrémenté à chaque focus terminé sur cette tâche. */
   pomodorosSpent: number;
+  /** Sous-tâche de… (un seul niveau, D-046). */
+  parentId?: string;
   order: number;
   updatedAt: LocalIso;
 }
@@ -42,7 +44,8 @@ export interface Session {
 
 export interface ScaleEntry {
   points: number;
-  expectedPomodoros: number;
+  /** Temps de focus estimé pour une tâche de cette taille, en minutes (D-046). */
+  minutes: number;
 }
 export type Scale = Record<Size, ScaleEntry>;
 
@@ -79,6 +82,8 @@ export interface Settings {
   longBreakMinutes: number;
   focusesBeforeLongBreak: number;
   scale: Scale;
+  /** Heures de vraie concentration dans une journée : convertit les estimations en jours (D-046). */
+  focusHoursPerDay: number;
   corner: Corner;
   soundEnabled: boolean;
   /** 0 à 1. */

@@ -1,6 +1,7 @@
 // Données de démonstration, en développement uniquement (`/?view=widget&seed=1`) :
 // 30 tâches courantes et 120 jours d'historique, comme le prototype de la Phase 1.
 
+import { expectedPomodoros } from "../core/effort";
 import { createEmptyData, DEFAULT_SCALE } from "../core/schema";
 import { toLocalIso } from "../core/time";
 import type { DataFile, Session, Size, Task } from "../core/types";
@@ -67,7 +68,7 @@ export function demoData(now: number, extraTasks = 0): DataFile {
       if (size === "XL" && xl++ >= 3) size = "L";
       const p = Math.max(
         1,
-        Math.round(DEFAULT_SCALE[size].expectedPomodoros * FACTOR[size] * (0.78 + r() * 0.44)),
+        Math.round(expectedPomodoros(DEFAULT_SCALE, size, 25) * FACTOR[size] * (0.78 + r() * 0.44)),
       );
       const at = new Date(day);
       at.setHours(9 + Math.floor(r() * 9), Math.floor(r() * 60));

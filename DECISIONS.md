@@ -360,3 +360,17 @@ Choisi après test du prototype. Le widget ne se déploie que si le curseur rest
 - **Constat** : avec Rai, la fenêtre du widget est plus grande que la fiche ; ses zones transparentes bloquaient les clics vers les apps en dessous.
 - **Clics** : le widget signale ses zones opaques (fiche et Rai, + 4 px d'ombre) à chaque changement de taille et chaque seconde. Un fil Rust relève le curseur (toutes les 40 ms quand il est à moins de 60 pt du widget, sinon toutes les 250 ms) et rend la fenêtre transparente aux clics hors de ces zones (`set_ignore_cursor_events`). Sans zones connues, la fenêtre garde ses clics (jamais de fenêtre « fantôme »).
 - **Balade** : pendant une pause, toutes les 3 min si tu ne touches à rien depuis 15 s, Rai file vers une autre des huit places (« Je me dégourdis les pattes ») ; à la fin de la pause, il rentre à sa place. La balade ne change pas le réglage de position ; un glisser ou une esquive, si. Désactivable : Réglages → Rai.
+
+---
+
+## V1.2.0 — Estimation en temps, temps passé, sous-tâches
+
+### D-046 · Une taille = une durée de focus ; temps passé contre estimé ; sous-tâches
+- **Taille en temps** : le barème donne, pour chaque taille, des points (heatmap, inchangés) et une **durée de focus estimée** (`ScaleEntry.minutes`, réglable au quart d'heure). Défauts : XS 30 min, S 1 h, M 2 h, L 4 h, XL 8 h. Un ancien fichier (`expectedPomodoros`) est relu en `pomodoros × 25 min` : rien ne change pour qui avait déjà réglé son barème.
+- **Journée** : nouveau réglage « Heures de vraie concentration par journée » (4 h par défaut, 1 à 12). Il ne sert qu'à traduire une durée en journées (« M = 2 h ≈ ½ jour »), au quart de journée près. 4 h et non 8 : une journée de bureau contient rarement plus de 4 à 5 h de focus réel ; compter 8 h ferait passer une M pour une demi-journée qu'elle ne sera jamais.
+- **Temps passé** : somme des sessions de focus de la tâche (pauses du minuteur déduites, prolongation comprise), plus le focus en cours. Pour une tâche découpée, celui de ses sous-tâches s'ajoute (sauf sous-tâches abandonnées). Pas de nouveau champ : tout se calcule depuis l'historique des sessions (`src/core/effort.ts`).
+- **Budget** : la durée de la taille de la tâche (pour une tâche découpée, celle du parent : c'est l'estimation de départ qu'on veut confronter au réel). Affiché « passé / estimé · reste » ou « dépassé de… », avec une barre qui vire au rouge au-delà de 100 %.
+- **Sous-tâches** : un seul niveau (`Task.parentId`), chacune avec sa propre taille. Le découpage s'affiche face au budget du parent (« Découpage : 3 h sur 1 h estimée ») : c'est là qu'on voit qu'une estimation était trop basse, avant d'avoir travaillé. Une sous-tâche peut être la tâche en cours ; son temps compte pour elle et pour son parent. Les points restent ceux de chaque tâche cochée.
+- **Widget** : sous la tâche en cours, la barre du projet (parent ou tâche elle-même) et jusqu'à 3 sous-tâches ouvertes, à cocher ou à prendre comme tâche en cours. Dans ce cas, les priorités se limitent à 2 et la fiche déployée passe à 560 px de haut. En pause, la fiche repliée affiche « Reste 1 h 10 · Projet » (ou « Dépassé de 20 min ») à la place de la tâche.
+- **Calibration** : toujours en pomodoros, les pomodoros attendus étant déduits de la durée (`round(minutes / durée du focus)`, au moins 1).
+- **Non fait** : pas de chrono à rebours « temps restant » qui remplacerait l'ensō pendant le focus ; l'ensō garde la durée du pomodoro, le temps restant du projet est à côté. Pas de sous-sous-tâches.

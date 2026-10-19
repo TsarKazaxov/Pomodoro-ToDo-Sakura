@@ -22,7 +22,7 @@ export function newId(): string {
 /** Ajoute une tâche en tête de liste. */
 export function addTask(
   tasks: readonly Task[],
-  input: { title: string; size: Size; priority?: boolean },
+  input: { title: string; size: Size; priority?: boolean; parentId?: string },
   now: number,
   id: string = newId(),
 ): Task[] {
@@ -38,6 +38,7 @@ export function addTask(
     order: 0,
     updatedAt: iso,
   };
+  if (input.parentId) task.parentId = input.parentId;
   return [task, ...tasks.map((t) => ({ ...t, order: t.order + 1 }))];
 }
 

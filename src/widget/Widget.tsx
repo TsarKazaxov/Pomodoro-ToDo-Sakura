@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { comboVisible } from "../core/combo";
+import {
+  childrenOf,
+  daysLabel,
+  effortOf,
+  formatMinutes,
+  spentByTask,
+  type Effort,
+} from "../core/effort";
 import { shouldSplit } from "../core/stats";
 import { currentTask, priorities } from "../core/tasks";
 import { dayKeyAt } from "../core/time";
@@ -44,7 +52,7 @@ import styles from "./Widget.module.css";
 /** Marge transparente autour de la carte, pour son ombre. */
 export const SHADOW_MARGIN = 10;
 export const COMPACT = { w: 240, h: 64 };
-export const EXPANDED = { w: 360, h: 520 };
+export const EXPANDED = { w: 360, h: 560 };
 /** Fiche repliée quand Rai parle : la réplique prend la place du minuteur (D-044). */
 export const TALK_H = 88;
 const RAI_GAP = 4;
@@ -345,10 +353,26 @@ function WidgetReady({ data }: { data: DataFile }) {
   const overtime = isOvertime(t);
   const cur = currentTask(data.tasks);
   const prio = priorities(data.tasks);
-  const open3 = prio.slice(0, 3);
-  const choices = data.tasks
-    .filter((x) => x.status === "todo" || x.status === "doing")
+  // Tâches proposées : chaque tâche suivie de ses sous-tâches ouvertes (D-046).
+  const isOpen = (x: { status: string }) => x.status === "todo" || x.status === "doing";
+  const tops = data.tasks
+    .filter((x) => isOpen(x) && !x.parentId)
     .sort((a, b) => Number(b.priority) - Number(a.priority) || a.order - b.order);
+  const choices = [
+    ...tops.flatMap((p) => [p, ...childrenOf(data.tasks, p.id).filter(isOpen)]),
+    ...data.tasks.filter((x) => isOpen(x) && x.parentId && !tops.some((p) => p.id === x.parentId)),
+  ];
+  // Projet : la tâche en cours, ou sa tâche parente si c'est une sous-tâche.
+  const project = cur?.parentId ? (data.tasks.find((x) => x.id === cur.parentId) ?? cur) : cur;
+  const spent = project ? spentByTask(data, now) : null;
+  const projectEffort =
+    project && spent ? effortOf(project, data.tasks, spent, data.settings.scale) : null;
+  const subEffort =
+    cur && cur !== project && spent ? effortOf(cur, data.tasks, spent, data.settings.scale) : null;
+  const subtasks = project ? childrenOf(data.tasks, project.id) : [];
+  // Avec des sous-tâches à l'écran, deux priorités suffisent : la carte garde sa hauteur.
+  const prioMax = subtasks.length > 0 ? 2 : 3;
+  const open3 = prio.slice(0, prioMax);
   const today = dayKeyAt(now);
   const todayPoints = data.tasks
     .filter((x) => x.status === "done" && x.completedAt?.startsWith(today))
@@ -387,7 +411,17 @@ function WidgetReady({ data }: { data: DataFile }) {
   const trayTitle = t.phase === "idle" ? "" : paused ? `‖ ${time}` : time;
   const toggleLabel =
     t.phase === "idle" ? fr.start : paused ? fr.resume : overtime ? fr.takeBreak : fr.suspend;
-  const taskLine = cur ? cur.title : t.phase === "focus" ? fr.freeFocusRunning : fr.pickTask;
+  // En pause, la fiche repliée rappelle ce qui reste à faire sur le projet (D-046).
+  const taskLine =
+    isBreak && project && projectEffort
+      ? projectEffort.overMin
+        ? fr.overBy(formatMinutes(projectEffort.overMin), project.title)
+        : fr.remaining(formatMinutes(projectEffort.remainingMin), project.title)
+      : cur
+        ? cur.title
+        : t.phase === "focus"
+          ? fr.freeFocusRunning
+          : fr.pickTask;
   useEffect(() => {
     void trayUpdate(trayTitle, toggleLabel, running);
   }, [trayTitle, toggleLabel, running]);
@@ -537,20 +571,59 @@ function WidgetReady({ data }: { data: DataFile }) {
                 <option value="">{fr.freeFocus}</option>
                 {choices.map((x) => (
                   <option key={x.id} value={x.id}>
+                    {x.parentId ? "↳ " : ""}
                     {x.title} · {x.size}
                   </option>
                 ))}
               </select>
-              {cur ? (
-                <Dots
-                  spent={cur.pomodorosSpent}
-                  expected={data.settings.scale[cur.size].expectedPomodoros}
-                  xl={cur.size === "XL"}
-                />
+              {project && projectEffort ? (
+                <>
+                  <EffortBar
+                    label={cur !== project ? project.title : null}
+                    effort={projectEffort}
+                    days={daysLabel(projectEffort.budgetMin, data.settings.focusHoursPerDay)}
+                  />
+                  {subEffort && cur && (
+                    <EffortBar label={cur.title} effort={subEffort} days={null} small />
+                  )}
+                  {subtasks.length > 0 && (
+                    <ul className={styles.subs}>
+                      {subtasks.slice(0, 3).map((x) => (
+                        <li key={x.id} className={x.id === cur?.id ? styles.subCurrent : ""}>
+                          <input
+                            type="checkbox"
+                            className={styles.tick}
+                            checked={x.status === "done"}
+                            onChange={(e) =>
+                              dispatch({
+                                type: "task/setStatus",
+                                id: x.id,
+                                status: e.target.checked ? "done" : "todo",
+                              })
+                            }
+                            aria-label={fr.complete(x.title)}
+                          />
+                          <button
+                            className={styles.subTitle}
+                            onClick={() => dispatch({ type: "task/setCurrent", id: x.id })}
+                            title={fr.makeCurrent}
+                            disabled={x.status === "done"}
+                          >
+                            {x.title}
+                          </button>
+                          <span className={styles.size}>{x.size}</span>
+                        </li>
+                      ))}
+                      {subtasks.length > 3 && (
+                        <li className={styles.more}>{fr.more(subtasks.length - 3)}</li>
+                      )}
+                    </ul>
+                  )}
+                </>
               ) : (
                 <p className={styles.hintMuted}>{fr.freeFocusHint}</p>
               )}
-              {cur && shouldSplit(cur, data.settings.scale) && (
+              {cur && shouldSplit(cur, data.settings.scale, data.settings.focusMinutes) && (
                 <p className={styles.hint}>{fr.splitHint}</p>
               )}
             </div>
@@ -585,7 +658,9 @@ function WidgetReady({ data }: { data: DataFile }) {
                       </span>
                     </li>
                   ))}
-                  {prio.length > 3 && <li className={styles.more}>{fr.more(prio.length - 3)}</li>}
+                  {prio.length > prioMax && (
+                    <li className={styles.more}>{fr.more(prio.length - prioMax)}</li>
+                  )}
                 </ul>
               )}
               <input
@@ -664,22 +739,38 @@ function useHitRects(now: number) {
   useEffect(report, [now, report]);
 }
 
-function Dots({ spent, expected, xl }: { spent: number; expected: number; xl: boolean }) {
-  const shown = Math.min(Math.max(spent, expected), 12);
+/** Temps passé sur l'estimation : « 1 h 40 / 4 h · reste 2 h 20 », ou le dépassement (D-046). */
+function EffortBar({
+  label,
+  effort,
+  days,
+  small,
+}: {
+  label: string | null;
+  effort: Effort;
+  days: string | null;
+  small?: boolean;
+}) {
+  const over = effort.overMin > 0;
   return (
-    <div className={styles.dots}>
-      {Array.from({ length: shown }, (_, i) => (
-        <i
-          key={i}
-          className={
-            i < Math.min(spent, expected) ? styles.on : i < spent ? styles.over : undefined
-          }
-        />
-      ))}
-      <span>
-        {spent} / {expected}
-        {xl ? "+" : ""}
-      </span>
+    <div className={`${styles.effort} ${small ? styles.effortSmall : ""}`}>
+      <div className={styles.effortLine}>
+        {label && <span className={styles.effortLabel}>{label}</span>}
+        <span className={styles.effortNums}>
+          {formatMinutes(effort.spentMin)} / {formatMinutes(effort.budgetMin)}
+          {days ? ` (${days})` : ""}
+        </span>
+        <span className={over ? styles.effortOver : styles.effortLeft}>
+          {over
+            ? fr.overShort(formatMinutes(effort.overMin))
+            : fr.leftShort(formatMinutes(effort.remainingMin))}
+        </span>
+      </div>
+      <i
+        className={`${styles.effortTrack} ${over ? styles.effortTrackOver : ""}`}
+        style={{ "--p": Math.min(1, effort.ratio) } as React.CSSProperties}
+        aria-hidden="true"
+      />
     </div>
   );
 }

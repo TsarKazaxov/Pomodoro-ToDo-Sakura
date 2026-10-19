@@ -1,5 +1,6 @@
 // Onglet Réglages (brief §4) : durées, cycle, barème, coin, son, thème, démarrage, données.
 
+import { daysLabel, expectedPomodoros } from "../core/effort";
 import { useState } from "react";
 import { parseDataFile, serialize } from "../core/schema";
 import { dayKeyAt } from "../core/time";
@@ -90,7 +91,8 @@ export function SettingsTab({ data }: { data: DataFile }) {
             <tr>
               <th>Taille</th>
               <th>Points</th>
-              <th>Pomodoros attendus</th>
+              <th>Focus estimé (h)</th>
+              <th>Soit</th>
             </tr>
           </thead>
           <tbody>
@@ -112,21 +114,44 @@ export function SettingsTab({ data }: { data: DataFile }) {
                 </td>
                 <td>
                   <NumberInput
-                    label={`Pomodoros attendus ${size}`}
-                    value={s.scale[size].expectedPomodoros}
-                    min={1}
+                    label={`Heures de focus estimées pour ${size}`}
+                    value={s.scale[size].minutes / 60}
+                    min={0.25}
                     max={100}
-                    onChange={(v) =>
+                    step={0.25}
+                    onChange={(h) =>
                       set({
-                        scale: { ...s.scale, [size]: { ...s.scale[size], expectedPomodoros: v } },
+                        scale: {
+                          ...s.scale,
+                          [size]: { ...s.scale[size], minutes: Math.round(h * 60) },
+                        },
                       })
                     }
                   />
+                </td>
+                <td className={styles.scaleHint}>
+                  {daysLabel(s.scale[size].minutes, s.focusHoursPerDay)} ·{" "}
+                  {((n) => `${n} pomodoro${n > 1 ? "s" : ""}`)(
+                    expectedPomodoros(s.scale, size, s.focusMinutes),
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        <NumberRow
+          id="s-dayfocus"
+          label="Heures de vraie concentration par journée"
+          value={s.focusHoursPerDay}
+          min={1}
+          max={12}
+          onChange={(v) => set({ focusHoursPerDay: v })}
+        />
+        <p className={styles.settingNote}>
+          Les estimations sont en temps de focus, celui que Sakura mesure. Une journée de travail
+          compte rarement plus de 4 à 5 h de vraie concentration : c'est ce qui sert à traduire une
+          taille en jours.
+        </p>
       </fieldset>
 
       <fieldset className={styles.fieldset}>
@@ -423,6 +448,7 @@ function NumberInput({
   max,
   onChange,
   id,
+  step = 1,
 }: {
   label?: string;
   value: number;
@@ -430,6 +456,8 @@ function NumberInput({
   max: number;
   onChange(v: number): void;
   id?: string;
+  /** Pas de saisie (0,25 pour des heures au quart d'heure). */
+  step?: number;
 }) {
   const [text, setText] = useState(String(value));
   const [last, setLast] = useState(value);
@@ -444,11 +472,12 @@ function NumberInput({
       className={styles.num}
       min={min}
       max={max}
+      step={step}
       value={text}
       aria-label={label}
       onChange={(e) => {
         setText(e.target.value);
-        const v = Math.round(Number(e.target.value));
+        const v = Math.round(Number(e.target.value) / step) * step;
         if (e.target.value !== "" && v >= min && v <= max) onChange(v);
       }}
       onBlur={() => setText(String(value))}

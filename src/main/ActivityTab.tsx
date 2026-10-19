@@ -40,7 +40,10 @@ export function ActivityTab({ data }: { data: DataFile }) {
   const days = useMemo(() => buildDayMap(data.tasks, data.sessions, data.settings.scale), [data]);
   const th = useMemo(() => adaptiveThresholds(days), [days]);
   const grid = useMemo(() => heatGrid(today, WEEKS), [today]);
-  const calib = useMemo(() => calibration(data.tasks, data.settings.scale), [data]);
+  const calib = useMemo(
+    () => calibration(data.tasks, data.settings.scale, undefined, data.settings.focusMinutes),
+    [data],
+  );
   const [tip, setTip] = useState<Tip | null>(null);
   const titles = useMemo(
     () => new Map(data.tasks.map((t) => [t.id, `${t.title} · ${t.size}`])),

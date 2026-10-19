@@ -1,6 +1,7 @@
 // Onglet Tâches : backlog complet, glisser-déposer, filtres, édition en ligne, épinglage.
 
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { childrenOf, effortOf, formatMinutes, spentByTask } from "../core/effort";
 import {
   SIZES,
   TASK_STATUSES,
@@ -10,6 +11,7 @@ import {
   type TaskStatus,
 } from "../core/types";
 import { useSakura } from "../state/store";
+import { useNow } from "../ui/hooks";
 import styles from "./main.module.css";
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -60,19 +62,38 @@ export function TasksTab({ data }: { data: DataFile }) {
     [dispatch],
   );
 
+  // Tâches de premier niveau ; une tâche apparaît aussi si l'une de ses sous-tâches correspond
+  // aux filtres (D-046).
+  const matches = useCallback(
+    (t: Task) =>
+      (status === "all"
+        ? true
+        : status === "open"
+          ? t.status === "todo" || t.status === "doing"
+          : t.status === status) &&
+      (sizes.size === 0 || sizes.has(t.size)),
+    [status, sizes],
+  );
   const list = useMemo(
     () =>
       data.tasks
-        .filter((t) =>
-          status === "all"
-            ? true
-            : status === "open"
-              ? t.status === "todo" || t.status === "doing"
-              : t.status === status,
-        )
-        .filter((t) => sizes.size === 0 || sizes.has(t.size))
+        .filter((t) => !t.parentId)
+        .filter((t) => matches(t) || childrenOf(data.tasks, t.id).some(matches))
         .sort((a, b) => a.order - b.order),
-    [data.tasks, status, sizes],
+    [data.tasks, matches],
+  );
+  const now = useNow(15_000);
+  const spent = useMemo(() => spentByTask(data, now), [data, now]);
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggleOpen = useCallback(
+    (id: string) =>
+      setOpen((prev) => {
+        const n = new Set(prev);
+        if (n.has(id)) n.delete(id);
+        else n.add(id);
+        return n;
+      }),
+    [],
   );
   const counts = useMemo(() => {
     const c = { todo: 0, doing: 0, done: 0, dropped: 0 };
@@ -140,16 +161,56 @@ export function TasksTab({ data }: { data: DataFile }) {
         <p className={styles.emptyState}>Aucune tâche ne correspond à ces filtres.</p>
       ) : (
         <ul className={styles.taskList} onDragOver={(e) => dragId && e.preventDefault()}>
-          {list.map((t) => (
-            <TaskRow
-              key={t.id}
-              task={t}
-              expected={data.settings.scale[t.size].expectedPomodoros}
-              dragging={dragId === t.id}
-              over={overId === t.id && dragId !== t.id}
-              dnd={dnd}
-            />
-          ))}
+          {list.flatMap((t) => {
+            const e = effortOf(t, data.tasks, spent, data.settings.scale);
+            const expanded = open.has(t.id);
+            const rows = [
+              <TaskRow
+                key={t.id}
+                task={t}
+                spentMin={e.spentMin}
+                budgetMin={e.budgetMin}
+                subDone={e.subtasks.done}
+                subTotal={e.subtasks.total}
+                expanded={expanded}
+                onToggle={toggleOpen}
+                dragging={dragId === t.id}
+                over={overId === t.id && dragId !== t.id}
+                dnd={dnd}
+              />,
+            ];
+            if (expanded) {
+              for (const c of childrenOf(data.tasks, t.id).filter(matches)) {
+                const ce = effortOf(c, data.tasks, spent, data.settings.scale);
+                rows.push(
+                  <TaskRow
+                    key={c.id}
+                    task={c}
+                    child
+                    spentMin={ce.spentMin}
+                    budgetMin={ce.budgetMin}
+                    subDone={0}
+                    subTotal={0}
+                    expanded={false}
+                    onToggle={toggleOpen}
+                    dragging={false}
+                    over={false}
+                    dnd={dnd}
+                  />,
+                );
+              }
+              rows.push(
+                <li key={`${t.id}-add`} className={styles.subAdd}>
+                  <SubtaskInput
+                    parentId={t.id}
+                    planned={e.subtasks.plannedMin}
+                    budget={e.budgetMin}
+                  />
+                </li>,
+              );
+            }
+            return rows;
+          })}
         </ul>
       )}
       <p className={styles.foot}>
@@ -170,7 +231,14 @@ interface DnD {
 
 interface RowProps {
   task: Task;
-  expected: number;
+  /** Sous-tâche, affichée en retrait sous sa tâche. */
+  child?: boolean;
+  spentMin: number;
+  budgetMin: number;
+  subDone: number;
+  subTotal: number;
+  expanded: boolean;
+  onToggle(id: string): void;
   dragging: boolean;
   over: boolean;
   /** Stable d'un rendu à l'autre : seules les lignes modifiées se redessinent (1 000 tâches). */
@@ -185,7 +253,13 @@ function sameRow(a: RowProps, b: RowProps): boolean {
   const x = a.task;
   const y = b.task;
   return (
-    a.expected === b.expected &&
+    a.child === b.child &&
+    a.spentMin === b.spentMin &&
+    a.budgetMin === b.budgetMin &&
+    a.subDone === b.subDone &&
+    a.subTotal === b.subTotal &&
+    a.expanded === b.expanded &&
+    a.onToggle === b.onToggle &&
     a.dragging === b.dragging &&
     a.over === b.over &&
     a.dnd === b.dnd &&
@@ -198,7 +272,19 @@ function sameRow(a: RowProps, b: RowProps): boolean {
   );
 }
 
-const TaskRow = memo(function TaskRow({ task: t, expected, dragging, over, dnd }: RowProps) {
+const TaskRow = memo(function TaskRow({
+  task: t,
+  child,
+  spentMin,
+  budgetMin,
+  subDone,
+  subTotal,
+  expanded,
+  onToggle,
+  dragging,
+  over,
+  dnd,
+}: RowProps) {
   const dispatch = useSakura((s) => s.dispatch);
   const title = useRef<HTMLInputElement>(null);
   const commitTitle = () => {
@@ -211,10 +297,11 @@ const TaskRow = memo(function TaskRow({ task: t, expected, dragging, over, dnd }
       className={[
         styles.taskRow,
         styles[`is_${t.status}`],
+        child ? styles.subRow : "",
         dragging ? styles.dragging : "",
         over ? styles.over : "",
       ].join(" ")}
-      draggable
+      draggable={!child}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", t.id);
@@ -230,9 +317,15 @@ const TaskRow = memo(function TaskRow({ task: t, expected, dragging, over, dnd }
         dnd.drop(t.id);
       }}
     >
-      <span className={styles.grip} aria-hidden="true" title="Glisser pour réordonner">
-        ⋮⋮
-      </span>
+      {child ? (
+        <span className={styles.grip} aria-hidden="true">
+          ↳
+        </span>
+      ) : (
+        <span className={styles.grip} aria-hidden="true" title="Glisser pour réordonner">
+          ⋮⋮
+        </span>
+      )}
       <input
         type="checkbox"
         className={styles.tick}
@@ -272,11 +365,35 @@ const TaskRow = memo(function TaskRow({ task: t, expected, dragging, over, dnd }
         ))}
       </select>
       <span
-        className={`${styles.pom} ${t.pomodorosSpent > expected ? styles.overBudget : ""}`}
-        title="Pomodoros passés / attendus"
+        className={`${styles.pom} ${spentMin > budgetMin ? styles.overBudget : ""}`}
+        title={
+          spentMin > budgetMin
+            ? `Dépassé de ${formatMinutes(spentMin - budgetMin)}`
+            : `Reste ${formatMinutes(budgetMin - spentMin)} sur l'estimation`
+        }
       >
-        {t.pomodorosSpent}/{expected}
+        {formatMinutes(spentMin)} / {formatMinutes(budgetMin)}
+        <i
+          className={styles.effortBar}
+          style={
+            { "--p": Math.min(1, budgetMin ? spentMin / budgetMin : 0) } as React.CSSProperties
+          }
+          aria-hidden="true"
+        />
       </span>
+      {child ? (
+        <span />
+      ) : (
+        <button
+          className={styles.subToggle}
+          aria-expanded={expanded}
+          onClick={() => onToggle(t.id)}
+          title={subTotal ? "Sous-tâches" : "Ajouter des sous-tâches"}
+        >
+          {subTotal ? `${subDone}/${subTotal}` : "＋"}
+          <span className={styles.srOnly}> sous-tâches</span>
+        </button>
+      )}
       <button
         className={styles.pin}
         aria-pressed={t.priority}
@@ -310,3 +427,37 @@ const TaskRow = memo(function TaskRow({ task: t, expected, dragging, over, dnd }
     </li>
   );
 }, sameRow);
+
+/** Ajout d'une sous-tâche sous la tâche dépliée, avec le total estimé du découpage. */
+function SubtaskInput({
+  parentId,
+  planned,
+  budget,
+}: {
+  parentId: string;
+  planned: number;
+  budget: number;
+}) {
+  const dispatch = useSakura((s) => s.dispatch);
+  const [draft, setDraft] = useState("");
+  return (
+    <>
+      <input
+        className={styles.add}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && draft.trim()) {
+            dispatch({ type: "task/addSubtask", parentId, raw: draft });
+            setDraft("");
+          }
+        }}
+        placeholder="Sous-tâche, ex. : Maquette mobile #S"
+        aria-label="Nouvelle sous-tâche"
+      />
+      <span className={`${styles.subPlan} ${planned > budget ? styles.overBudget : ""}`}>
+        Découpage : {formatMinutes(planned)} sur {formatMinutes(budget)} estimées
+      </span>
+    </>
+  );
+}

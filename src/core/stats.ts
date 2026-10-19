@@ -1,6 +1,7 @@
 // Calculs de l'activité : points par jour, niveaux de heatmap, calibration, série, taux.
 // Fonctions pures ; aucune ne lit l'horloge, le jour courant est toujours passé en argument.
 
+import { expectedPomodoros } from "./effort";
 import { addDays, dayKeyOf, daysBetween, weekdayMon0, type DayKey } from "./time";
 import { SIZES, type Scale, type Session, type Size, type Task } from "./types";
 
@@ -132,12 +133,13 @@ export function calibration(
   tasks: readonly Task[],
   scale: Scale,
   minCount = CALIBRATION_MIN_COUNT,
+  focusMinutes = 25,
 ): Calibration[] {
   return SIZES.map((size) => {
     const done = tasks.filter(
       (t) => t.size === size && t.status === "done" && t.pomodorosSpent >= 1,
     );
-    const expected = scale[size].expectedPomodoros;
+    const expected = expectedPomodoros(scale, size, focusMinutes);
     const average = done.length
       ? done.reduce((a, t) => a + t.pomodorosSpent, 0) / done.length
       : null;
@@ -194,6 +196,6 @@ export function completionRate(days: DayMap, today: DayKey, n = 30): number | nu
 }
 
 /** Conseil de découpage : taille XL, ou plus de pomodoros passés que prévu pour une XL. */
-export function shouldSplit(task: Task, scale: Scale): boolean {
-  return task.size === "XL" || task.pomodorosSpent > scale.XL.expectedPomodoros;
+export function shouldSplit(task: Task, scale: Scale, focusMinutes = 25): boolean {
+  return task.size === "XL" || task.pomodorosSpent > expectedPomodoros(scale, "XL", focusMinutes);
 }

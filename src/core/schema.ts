@@ -24,11 +24,11 @@ import {
 export const SCHEMA_VERSION = 1;
 
 export const DEFAULT_SCALE: Scale = {
-  XS: { points: 1, expectedPomodoros: 1 },
-  S: { points: 2, expectedPomodoros: 2 },
-  M: { points: 3, expectedPomodoros: 4 },
-  L: { points: 5, expectedPomodoros: 8 },
-  XL: { points: 8, expectedPomodoros: 12 },
+  XS: { points: 1, minutes: 30 },
+  S: { points: 2, minutes: 60 },
+  M: { points: 3, minutes: 120 },
+  L: { points: 5, minutes: 240 },
+  XL: { points: 8, minutes: 480 },
 };
 
 export function defaultSettings(): Settings {
@@ -38,6 +38,7 @@ export function defaultSettings(): Settings {
     longBreakMinutes: 15,
     focusesBeforeLongBreak: 4,
     scale: structuredClone(DEFAULT_SCALE),
+    focusHoursPerDay: 4,
     corner: "top-right",
     soundEnabled: true,
     soundVolume: 0.6,
@@ -106,6 +107,7 @@ function readTask(v: unknown, i: number): Task {
     pomodorosSpent,
     order,
     updatedAt,
+    parentId,
   } = v;
   if (!isStr(id) || !id) fail(`${at}.id`);
   if (!isStr(title)) fail(`${at}.title`);
@@ -128,6 +130,7 @@ function readTask(v: unknown, i: number): Task {
     updatedAt: isIso(updatedAt) ? updatedAt : createdAt,
   };
   if (status === "done" && isIso(completedAt)) task.completedAt = completedAt;
+  if (isStr(parentId) && parentId) task.parentId = parentId;
   return task;
 }
 
@@ -166,7 +169,12 @@ function readSettings(v: unknown): Settings {
       if (isObj(e)) {
         scale[size] = {
           points: posInt(e.points, scale[size].points, 100),
-          expectedPomodoros: posInt(e.expectedPomodoros, scale[size].expectedPomodoros, 100),
+          // Avant D-046, l'estimation était un nombre de pomodoros de 25 min.
+          minutes: posInt(
+            e.minutes,
+            isNum(e.expectedPomodoros) ? e.expectedPomodoros * 25 : scale[size].minutes,
+            6000,
+          ),
         };
       }
     }
@@ -177,6 +185,7 @@ function readSettings(v: unknown): Settings {
     longBreakMinutes: posInt(v.longBreakMinutes, d.longBreakMinutes, 120),
     focusesBeforeLongBreak: posInt(v.focusesBeforeLongBreak, d.focusesBeforeLongBreak, 12),
     scale,
+    focusHoursPerDay: posInt(v.focusHoursPerDay, d.focusHoursPerDay, 12),
     corner: oneOf(CORNERS, v.corner) ? v.corner : d.corner,
     soundEnabled: typeof v.soundEnabled === "boolean" ? v.soundEnabled : d.soundEnabled,
     soundVolume: isNum(v.soundVolume) ? Math.min(1, Math.max(0, v.soundVolume)) : d.soundVolume,
@@ -266,6 +275,13 @@ export function parseDataFile(text: string): ParseResult {
     for (const t of tasks) {
       if (ids.has(t.id)) fail(`tâche en double ${t.id}`);
       ids.add(t.id);
+    }
+    // Sous-tâches : un seul niveau, parent existant ; sinon la tâche redevient indépendante.
+    const parentOf = new Map(tasks.map((t) => [t.id, t.parentId]));
+    for (const t of tasks) {
+      const p = t.parentId;
+      if (p !== undefined && (p === t.id || !parentOf.has(p) || parentOf.get(p) !== undefined))
+        delete t.parentId;
     }
     const data: DataFile = {
       schemaVersion: SCHEMA_VERSION,

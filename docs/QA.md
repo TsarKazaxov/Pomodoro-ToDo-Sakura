@@ -92,6 +92,13 @@ Coche au fur et à mesure. Si une ligne échoue, note ce que tu vois : c'est la 
 - [ ] Pendant une pause, sans toucher à rien 3 min : Rai change de place ; à la fin de la pause, il revient (V1.1.1).
 - [ ] Moniteur d'activité, focus en cours : CPU toujours < 2 %.
 
+**Estimation et sous-tâches (V1.2.0)**
+- [ ] Réglages → Barème : chaque taille montre sa durée et son équivalent en journées (« 2 h · ≈ ½ jour · 5 pomodoros ») ; passer M à 3 h ou les heures par jour à 6 change l'équivalent.
+- [ ] Vue complète → Tâches : « ＋ » sur une tâche, ajouter deux sous-tâches `#S` : « Découpage : 2 h sur … estimées ».
+- [ ] Prendre une sous-tâche comme tâche en cours, lancer un focus de 1 min : la barre du widget avance pour la sous-tâche et pour le projet.
+- [ ] En pause, fiche repliée : « Reste … · Projet » (ou « Dépassé de … »).
+- [ ] Ancien fichier de données (V1.1) : le barème relu donne M = 1 h 40 (4 pomodoros × 25 min), rien n'est perdu.
+
 **Raccourcis et menu**
 - [ ] ⌥⌘P démarre / suspend ; ⌥⌘N ouvre le widget avec le curseur dans l'ajout rapide ; ⌥⌘S ouvre la vue complète.
 - [ ] Barre de menu → Quitter : la tâche ajoutée juste avant est toujours là au relancement.

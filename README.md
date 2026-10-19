@@ -4,8 +4,9 @@ Minuteur Pomodoro, tâches du jour et heatmap d'effort, dans une petite fenêtre
 
 - **Widget** dans un coin de l'écran ou au milieu d'un bord : un ensō qui se dessine pendant le focus, la tâche en cours, tes priorités du jour, ta mini heatmap. Il se déploie quand tu poses le curseur dessus ou quand tu cliques dessus ; un clic à l'extérieur le referme. Glisse-le pour le déplacer. Rai, une mascotte manga, vit à côté : il travaille quand tu travailles, s'endort quand tu décroches, se transforme quand tu enchaînes, et commente le tout en japonais puis en français (ou en anglais), à l'écrit et à voix haute.
 - **Prolongation** : si tu travailles encore quand le focus se termine, il continue de compter (« +mm:ss ») ; la pause démarre quand tu lâches clavier et souris 2 min, ou quand tu cliques « Faire la pause ».
-- **Tâches** avec une taille T-shirt (XS à XL) : ajoute-les en une ligne, `Relire la spec #M`.
-- **Activité** : une heatmap façon GitHub remplie par l'effort accompli (les points des tâches terminées), et la **calibration** : est-ce que tes M prennent vraiment 4 pomodoros ?
+- **Tâches** avec une taille T-shirt (XS à XL) : ajoute-les en une ligne, `Relire la spec #M`. Chaque taille vaut une durée de focus (M = 2 h ≈ ½ journée, réglable) ; Sakura compte le temps réellement passé, te dit ce qui reste ou de combien tu as dépassé, y compris pendant la pause.
+- **Sous-tâches** : découpe une grosse tâche en plus petites, chacune avec sa taille ; Sakura compare le découpage à l'estimation de départ.
+- **Activité** : une heatmap façon GitHub remplie par l'effort accompli (les points des tâches terminées), et la **calibration** : est-ce que tes M prennent vraiment le temps prévu ?
 
 Tes données restent chez toi, dans un fichier JSON sur iCloud Drive. Pas de compte, pas de serveur.
 
@@ -51,17 +52,21 @@ Le `.dmg` est **universel** : il fonctionne sur les Mac Apple Silicon (M1 et sui
 
 **Barème** (modifiable dans Réglages) :
 
-| Taille | Points | Pomodoros attendus |
-|---|---|---|
-| XS | 1 | 1 |
-| S | 2 | 2 |
-| M | 3 | 4 |
-| L | 5 | 8 |
-| XL | 8 | 12+ (Sakura te conseille de la découper) |
+| Taille | Points | Focus estimé | Soit (4 h de focus par jour) |
+|---|---|---|---|
+| XS | 1 | 30 min | < ¼ jour |
+| S | 2 | 1 h | ≈ ¼ jour |
+| M | 3 | 2 h | ≈ ½ jour |
+| L | 5 | 4 h | ≈ 1 jour |
+| XL | 8 | 8 h | ≈ 2 jours (Sakura te conseille de la découper en sous-tâches) |
+
+« Heures de vraie concentration par journée » se règle aussi : 4 h par défaut, parce qu'une journée de bureau en contient rarement plus.
+
+**Temps passé** : la somme de tes focus sur la tâche et ses sous-tâches, pauses déduites. Affiché dans la vue Tâches (« 1 h 15 / 2 h »), sous la tâche en cours dans le widget, et dans la fiche repliée pendant la pause (« Reste 45 min · Projet »).
 
 **Récompense** : cocher des tâches à moins de 10 minutes d'intervalle fait monter une série (×2, ×3, ×4) : plus de pétales, un son plus riche, et au 4ᵉ une pluie sur tout l'écran. « Mouvement réduit » (Réglages Système → Accessibilité → Affichage) coupe les pétales.
 
-**Calibration** : par taille, pomodoros réels ÷ attendus. En dessous de 0,8 tu surestimes, au-dessus de 1,2 tu sous-estimes. Elle s'affiche dès 5 tâches terminées (avec au moins un pomodoro) dans une taille.
+**Calibration** : par taille, pomodoros réels ÷ attendus (durée estimée ÷ durée du focus). En dessous de 0,8 tu surestimes, au-dessus de 1,2 tu sous-estimes. Elle s'affiche dès 5 tâches terminées (avec au moins un pomodoro) dans une taille.
 
 ## Tes données
 

@@ -43,7 +43,7 @@
 }
 .open {
   width: 360px;
-  height: 520px;
+  height: 560px;
 }
 .break {
   background: color-mix(in srgb, var(--surface) 80%, var(--sakura));
@@ -165,7 +165,7 @@
 /* ---------- déployé ---------- */
 .expanded {
   width: 360px;
-  height: 520px;
+  height: 560px;
   padding: 14px 16px;
   display: grid;
   grid-template-rows: auto auto 1fr auto auto;
@@ -319,6 +319,7 @@
 }
 .prioBlock {
   min-height: 0;
+  overflow: hidden;
 }
 .prio {
   list-style: none;
@@ -547,4 +548,95 @@
   .speech {
     animation: none;
   }
+}
+
+/* ---------- temps passé / estimé, sous-tâches (D-046) ---------- */
+.effort {
+  margin-top: 8px;
+}
+.effortSmall {
+  margin-top: 4px;
+  opacity: 0.85;
+}
+.effortLine {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.effortLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.effortNums {
+  white-space: nowrap;
+}
+.effortLeft,
+.effortOver {
+  margin-left: auto;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.effortLeft {
+  color: var(--ink);
+}
+.effortOver {
+  color: var(--shu);
+}
+.effortTrack {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 4px;
+  background: linear-gradient(to right, var(--ink) calc(var(--p) * 100%), var(--surface-2) 0);
+}
+.effortTrackOver {
+  background: var(--shu);
+}
+.subs {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+}
+.subs li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  font-size: 12px;
+}
+.subTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.subTitle:disabled {
+  text-decoration: line-through;
+  color: var(--ink-muted);
+  cursor: default;
+}
+.subCurrent .subTitle {
+  font-weight: 700;
+}
+.subs .more {
+  display: block;
+  padding-left: 26px;
+  font-size: 11px;
+  color: var(--ink-muted);
 }
