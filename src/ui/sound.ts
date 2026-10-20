@@ -54,7 +54,9 @@ export async function playClip(url: string, gain: number): Promise<boolean> {
   try {
     ctx ??= new AudioContext();
     const ac = ctx;
-    void ac.resume();
+    // Son bloqué (pas encore de geste de l'utilisateur) : la voix de macOS prend le relais.
+    await Promise.race([ac.resume(), new Promise((r) => setTimeout(r, 500))]);
+    if (ac.state !== "running") return false;
     let buf = buffers.get(url);
     if (!buf) {
       buf = fetch(url)
@@ -72,7 +74,8 @@ export async function playClip(url: string, gain: number): Promise<boolean> {
     src.start();
     voice = src;
     return true;
-  } catch {
+  } catch (e) {
+    console.error("clip de Rai illisible", url, e);
     buffers.delete(url);
     return false;
   }
