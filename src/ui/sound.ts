@@ -1,0 +1,92 @@
+// Tintement de bol, synthétisé (brief §3). `strikes` coups montants sur une gamme pentatonique
+// (sol, la, si, ré), pour la récompense graduelle (D-019).
+
+let ctx: AudioContext | null = null;
+const SCALE = [392, 440, 494, 587];
+const PARTIALS: [number, number, number][] = [
+  [392, 1, 5.5],
+  [394.2, 0.6, 5],
+  [1062, 0.35, 3.4],
+  [2018, 0.16, 2.2],
+  [3110, 0.07, 1.4],
+];
+
+export function chime(strikes: number, gain: number) {
+  if (gain <= 0) return;
+  try {
+    ctx ??= new AudioContext();
+    void ctx.resume();
+    const master = ctx.createGain();
+    master.gain.value = Math.min(1, gain) * 0.22;
+    master.connect(ctx.destination);
+    for (let k = 0; k < strikes; k++) {
+      const t = ctx.currentTime + k * 0.17;
+      const ratio = SCALE[Math.min(k, SCALE.length - 1)]! / SCALE[0]!;
+      const amp = k === strikes - 1 ? 1 : 0.7;
+      for (const [f, a, d] of PARTIALS) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.frequency.value = f * ratio;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(a * amp, t + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+        o.connect(g).connect(master);
+        o.start(t);
+        o.stop(t + d + 0.1);
+      }
+    }
+  } catch {
+    // Audio indisponible : silence.
+  }
+}
+
+// ---------- clips de voix de Rai (D-047) ----------
+
+let voice: AudioBufferSourceNode | null = null;
+let voiceSeq = 0;
+const buffers = new Map<string, Promise<AudioBuffer>>();
+
+/** Joue un clip ; `false` s'il n'a pas pu être lu (le son de macOS prend alors le relais). */
+export async function playClip(url: string, gain: number): Promise<boolean> {
+  const id = ++voiceSeq;
+  stopClip(false);
+  if (gain <= 0) return true;
+  try {
+    ctx ??= new AudioContext();
+    const ac = ctx;
+    // Son bloqué (pas encore de geste de l'utilisateur) : la voix de macOS prend le relais.
+    await Promise.race([ac.resume(), new Promise((r) => setTimeout(r, 500))]);
+    if (ac.state !== "running") return false;
+    let buf = buffers.get(url);
+    if (!buf) {
+      buf = fetch(url)
+        .then((r) => r.arrayBuffer())
+        .then((b) => ac.decodeAudioData(b));
+      buffers.set(url, buf);
+    }
+    const audio = await buf;
+    if (id !== voiceSeq) return true; // une réplique plus récente a pris la parole
+    const src = ac.createBufferSource();
+    const g = ac.createGain();
+    g.gain.value = Math.min(1, gain);
+    src.buffer = audio;
+    src.connect(g).connect(ac.destination);
+    src.start();
+    voice = src;
+    return true;
+  } catch (e) {
+    console.error("clip de Rai illisible", url, e);
+    buffers.delete(url);
+    return false;
+  }
+}
+
+export function stopClip(cancel = true) {
+  if (cancel) voiceSeq++;
+  try {
+    voice?.stop();
+  } catch {
+    // déjà terminé
+  }
+  voice = null;
+}

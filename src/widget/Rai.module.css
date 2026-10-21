@@ -1,0 +1,296 @@
+/* Rai (D-044). Toutes les animations portent sur opacity et transform (compositeur). */
+.rai {
+  position: fixed;
+  width: 112px;
+  height: 112px;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.rai:active {
+  cursor: grabbing;
+}
+.body {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 96%;
+  animation: breathe 3.6s ease-in-out infinite;
+}
+.stage {
+  position: absolute;
+  inset: 0;
+}
+.flip {
+  transform: scaleX(-1);
+}
+.body img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px rgba(29, 26, 46, 0.35));
+}
+@keyframes breathe {
+  50% {
+    transform: scale(1.012, 1.025);
+  }
+}
+
+/* Deux images qui alternent. */
+.fa {
+  animation: frameA var(--cycle, 1s) steps(1) infinite;
+}
+.fb {
+  opacity: 0;
+  animation: frameB var(--cycle, 1s) steps(1) infinite;
+}
+@keyframes frameA {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes frameB {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.shown {
+  opacity: 1;
+  transition: opacity 0.18s ease;
+}
+.hidden {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+/* Réactions brèves. */
+.victoire .body,
+.sursaut .body {
+  animation: hop 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) 2;
+}
+@keyframes hop {
+  40% {
+    transform: translateY(-14px) scale(1.04);
+  }
+}
+.reveil .body {
+  animation: shake 0.18s linear infinite;
+}
+@keyframes shake {
+  25% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+}
+.transfo .body {
+  animation: power 0.25s linear infinite;
+}
+@keyframes power {
+  50% {
+    transform: translate(1px, -1px) scale(1.03);
+  }
+}
+.esquive .body {
+  animation: dash 0.8s ease-in forwards;
+}
+@keyframes dash {
+  to {
+    transform: translateX(-40px);
+    opacity: 0;
+  }
+}
+
+/* Forme super : aura qui pulse et éclairs. */
+.aura {
+  position: absolute;
+  inset: 4px 10px 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 226, 90, 0.75),
+    rgba(255, 207, 58, 0.25) 60%,
+    transparent
+  );
+  animation: aura 1.1s ease-in-out infinite;
+}
+@keyframes aura {
+  50% {
+    opacity: 0.55;
+    transform: scale(1.08);
+  }
+}
+.sparks i,
+.stars i {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #fff2a0;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: twinkle 0.9s ease-in-out infinite;
+}
+.stars i {
+  background: #ffcf3a;
+  width: 11px;
+  height: 11px;
+}
+.sparks i:nth-child(1),
+.stars i:nth-child(1) {
+  left: 8px;
+  top: 18px;
+}
+.sparks i:nth-child(2),
+.stars i:nth-child(2) {
+  right: 10px;
+  top: 6px;
+  animation-delay: 0.3s;
+}
+.sparks i:nth-child(3),
+.stars i:nth-child(3) {
+  right: 18px;
+  bottom: 30px;
+  animation-delay: 0.6s;
+}
+@keyframes twinkle {
+  50% {
+    opacity: 0;
+    transform: scale(0.3) rotate(45deg);
+  }
+}
+
+/* Transformation : flash blanc. */
+.flash {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, #ffffff, rgba(255, 246, 176, 0.6) 55%, transparent);
+  animation: flash 1.8s ease-out forwards;
+}
+@keyframes flash {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+/* Sommeil : Zzz qui montent et bulle de morve (hanachōchin). */
+.sleep b {
+  position: absolute;
+  left: 30px;
+  top: 30px;
+  font:
+    700 12px/1 system-ui,
+    sans-serif;
+  color: #7f8fd0;
+  opacity: 0;
+  animation: zzz 3s ease-out infinite;
+}
+.sleep b:nth-of-type(2) {
+  animation-delay: 1s;
+  font-size: 14px;
+}
+.sleep b:nth-of-type(3) {
+  animation-delay: 2s;
+  font-size: 17px;
+}
+@keyframes zzz {
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-22px, -30px);
+  }
+}
+.snot {
+  position: absolute;
+  left: 52px;
+  top: 64px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(127, 184, 224, 0.9);
+  background: radial-gradient(circle at 35% 35%, #ffffff 0 18%, rgba(190, 228, 255, 0.35) 22%);
+  transform-origin: 30% 30%;
+  animation: snot 2.6s ease-in-out infinite;
+}
+@keyframes snot {
+  0%,
+  100% {
+    transform: scale(0.35);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+}
+
+/* Surprise, alarme, sueur, vitesse. */
+.mark {
+  position: absolute;
+  left: 4px;
+  top: 0;
+  font:
+    900 20px/1 system-ui,
+    sans-serif;
+  color: #e5383b;
+  text-shadow: 0 0 2px #ffffff;
+  animation: hop 0.5s ease-out 3;
+}
+.sweat {
+  position: absolute;
+  right: 22px;
+  top: 16px;
+  width: 7px;
+  height: 10px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: #8fd0f5;
+  animation: drop 1s ease-in infinite;
+}
+@keyframes drop {
+  to {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+.speed {
+  position: absolute;
+  inset: 30px -20px 24px 60px;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0 7px,
+    rgba(200, 200, 215, 0.9) 7px 9px,
+    transparent 9px 15px
+  );
+  animation: speed 0.8s linear forwards;
+}
+@keyframes speed {
+  to {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rai *,
+  .rai *::before {
+    animation: none !important;
+  }
+  .fb {
+    opacity: 0;
+  }
+}
