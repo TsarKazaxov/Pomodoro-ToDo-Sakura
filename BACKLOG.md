@@ -1,5 +1,7 @@
 # BACKLOG — hors V1
 
+Fait depuis : sous-tâches et temps passé par tâche (V1.2.0, D-046).
+
 Idées notées, **non codées**. Re-priorisation après les 5 jours d'usage du critère de réussite.
 
 ## Hors V1 (brief, section 7)
@@ -7,8 +9,7 @@ Idées notées, **non codées**. Re-priorisation après les 5 jours d'usage du c
 - Version Windows
 - Intégrations Jira / Notion / Calendrier
 - Tâches récurrentes
-- Sous-tâches
-- Statistiques par projet
+- Statistiques par projet (cumul hebdomadaire ; le temps passé par tâche existe depuis D-046)
 - Signature Apple Developer + notarisation (99 $/an) — supprime le contournement Gatekeeper
 - Application iPhone
 
@@ -16,7 +17,7 @@ Idées notées, **non codées**. Re-priorisation après les 5 jours d'usage du c
 - **Fusion multi-Mac simultanée** (fusion par `id` + `updatedAt`, pierres tombales `deletedAt`, absorption des copies de conflit iCloud) — inutile tant qu'un seul Mac écrit à la fois (D-014).
 - **Mise à jour automatique** (`tauri-plugin-updater`) — demande une signature des mises à jour ; en V1, mise à jour manuelle via la page Releases.
 - **Journal de focus** : une note libre à la fin d'un pomodoro (« sur quoi j'ai bloqué »).
-- **Découpage assisté d'une XL** : bouton « découper » qui crée N tâches S/M liées.
+- **Découpage assisté d'une XL** : bouton « découper » qui propose N sous-tâches S/M (les sous-tâches manuelles existent depuis D-046).
 - **Pause automatique à la mise en veille / verrouillage d'écran** (aujourd'hui le temps continue de courir, ce qui est le comportement attendu d'un minuteur à horodatages).
 - **Mode « ne pas déranger »** : couper le son et les pétales pendant un partage d'écran.
 - **Seuils de heatmap par quartiles** : déjà prévu V1 après 30 jours ; une version « par semaine glissante » pourrait mieux suivre les changements de rythme.

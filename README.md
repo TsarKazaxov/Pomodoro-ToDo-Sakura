@@ -108,7 +108,7 @@ Prérequis sur le Mac : Xcode Command Line Tools (`xcode-select --install`), Rus
 ```bash
 npm install
 npm run tauri dev       # lance l'app avec rechargement à chaud
-npm test                # 147 tests : minuteur, calculs, stockage, synchronisation, fuseaux
+npm test                # minuteur, calculs, stockage, synchronisation, fuseaux, Rai
 npm run lint && npm run typecheck && npm run format:check
 cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
 ```
@@ -129,4 +129,4 @@ cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings
 | `design/` | Prototype validé en Phase 1 |
 | `docs/QA.md` | Résultats de la passe qualité et checklist de test sur Mac |
 
-Décisions : [`DECISIONS.md`](DECISIONS.md). Hors périmètre V1 : [`BACKLOG.md`](BACKLOG.md).
+Produit : [`PRODUCT.md`](PRODUCT.md). Architecture : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Décisions : [`DECISIONS.md`](DECISIONS.md). Hors périmètre : [`BACKLOG.md`](BACKLOG.md). Reprendre avec Claude Code : [`CLAUDE.md`](CLAUDE.md).
